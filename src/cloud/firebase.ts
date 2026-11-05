@@ -248,3 +248,15 @@ export async function loadDevices(uid: string): Promise<RemoteDevice[]> {
   });
   return out;
 }
+
+// ---------------------------------------------------------------- настройки веб-версии
+// users/{uid}/web/settings — то, чего нет в iOS: оформления витрины (именованные периоды), чеки из кассы.
+
+export async function loadWebSettings(uid: string): Promise<Record<string, unknown> | null> {
+  const snap = await getDoc(doc(init().db, "users", uid, "web", "settings"));
+  return snap.exists() ? (snap.data() as Record<string, unknown>) : null;
+}
+
+export async function saveWebSettings(uid: string, data: Record<string, unknown>): Promise<void> {
+  await setDoc(doc(init().db, "users", uid, "web", "settings"), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+}
