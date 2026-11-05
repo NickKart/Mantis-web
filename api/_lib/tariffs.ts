@@ -112,6 +112,12 @@ export function addMonths(ms: number, months: number): number {
 
 export type Status = "none" | "trial" | "active" | "expired";
 
+/** Сохранённая в ЮKassa карта для автоплатежей. */
+export interface Card {
+  id: string;
+  title: string;
+}
+
 /** Счёт пользователя. Деньги – копейки, даты – мс. */
 export interface Account {
   balance: number;
@@ -124,10 +130,15 @@ export interface Account {
   status: Status;
   trialUsed: boolean;
   autoRenew: boolean;
+  /** Карта для автоплатежей: если на балансе не хватает на месяц, недостающее списывается с неё. */
+  card: Card | null;
+  /** Последняя неудачная попытка автоплатежа (текст для пользователя). */
+  autopayError: string | null;
 }
 
 export const emptyAccount = (): Account => ({
   balance: 0, plan: null, cameras: 1, annualUntil: null, paidUntil: null, status: "none", trialUsed: false, autoRenew: true,
+  card: null, autopayError: null,
 });
 
 export interface Entry {
@@ -184,8 +195,10 @@ export function applyCharges(acc: Account, now: number): { account: Account; ent
 }
 
 /** Зачислить оплату: деньги на баланс, выбранный тариф – в счёт; при оплате за год – 12 месяцев по годовой цене. */
-export function applyTopup(acc: Account, sel: Selection, amount: number, paymentId: string, now: number): { account: Account; entries: Entry[] } {
-  const a = { ...acc, balance: acc.balance + amount, plan: sel.plan, cameras: sel.cameras, autoRenew: true };
+export function applyTopup(
+  acc: Account, sel: Selection, amount: number, paymentId: string, now: number, auto = false,
+): { account: Account; entries: Entry[] } {
+  const a = { ...acc, balance: acc.balance + amount, plan: sel.plan, cameras: sel.cameras, autoRenew: true, autopayError: null };
   if (sel.period === "year") {
     const start = a.annualUntil != null && a.annualUntil > now ? a.annualUntil
       : a.paidUntil != null && a.paidUntil > now ? a.paidUntil : now;
@@ -193,7 +206,9 @@ export function applyTopup(acc: Account, sel: Selection, amount: number, payment
   }
   const top: Entry = {
     type: "topup", amount, balanceAfter: a.balance, at: now, plan: sel.plan, cameras: sel.cameras, paymentId,
-    note: `Оплата через ЮKassa: ${describeSelection(sel).replace(/^Mantis, /, "")}`,
+    note: auto
+      ? `Автоплатёж с карты${acc.card ? ` ${acc.card.title}` : ""}: продление «${TARIFFS[sel.plan].name}»`
+      : `Оплата через ЮKassa: ${describeSelection(sel).replace(/^Mantis, /, "")}`,
   };
   const r = applyCharges(a, now);
   return { account: r.account, entries: [top, ...r.entries] };
@@ -214,12 +229,33 @@ export function startTrial(acc: Account, plan: PlanId, cameras: number, now: num
   };
 }
 
-/** Следующее списание: когда и сколько (если автопродление включено и тариф выбран). */
-export function nextCharge(acc: Account, now: number): { at: number; amount: number; enough: boolean } | null {
+/** Следующее списание: когда, сколько, хватает ли баланса и сколько возьмём с карты. */
+export function nextCharge(acc: Account, now: number): { at: number; amount: number; enough: boolean; fromCard: number } | null {
   if (!acc.plan || !acc.autoRenew) return null;
   const at = acc.paidUntil != null && acc.paidUntil > now ? acc.paidUntil : now;
   const amount = monthlyCharge(acc.plan, acc.cameras, acc.annualUntil != null && at < acc.annualUntil);
-  return { at, amount, enough: acc.balance >= amount };
+  const enough = acc.balance >= amount;
+  // после 3 дней неудачных попыток с карты больше не списываем – только ручная оплата
+  const cardOk = !!acc.card && (acc.paidUntil == null || acc.paidUntil > now || now - acc.paidUntil <= GRACE_MS);
+  return { at, amount, enough, fromCard: !enough && cardOk ? Math.max(100, amount - acc.balance) : 0 };
+}
+
+/**
+ * Сколько списать с карты автоплатежом, чтобы продлить подписку (копейки), или null – не нужно.
+ * Только если срок закончился не больше 3 дней назад: дальше попытки прекращаются, пока пользователь
+ * не оплатит сам. Минимум 1 ₽ – меньше ЮKassa не принимает.
+ */
+export function autopayAmount(acc: Account, now: number): number | null {
+  if (!acc.card || !acc.plan || !acc.autoRenew || acc.paidUntil == null) return null;
+  if (acc.paidUntil > now || now - acc.paidUntil > GRACE_MS) return null;
+  const cost = monthlyCharge(acc.plan, acc.cameras, acc.annualUntil != null && acc.paidUntil < acc.annualUntil);
+  if (acc.balance >= cost) return null;
+  return Math.max(100, cost - acc.balance);
+}
+
+/** Номер попытки автоплатежа для этого срока: 0 в первые сутки после окончания, 1 во вторые… */
+export function autopayAttempt(acc: Account, now: number): number {
+  return acc.paidUntil == null ? 0 : Math.floor((now - acc.paidUntil) / (24 * 3600_000));
 }
 
 /** Рубли из копеек: «1 350 ₽», «190,50 ₽». */

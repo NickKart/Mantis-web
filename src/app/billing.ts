@@ -36,23 +36,32 @@ export interface LedgerItem {
 
 export interface BillingStatus {
   account: Account;
-  next: { at: number; amount: number; enough: boolean } | null;
+  next: { at: number; amount: number; enough: boolean; fromCard: number } | null;
   ledger: LedgerItem[];
   now: number;
+  /** Автоплатежи с карты подключены на сервере. */
+  autopay: boolean;
 }
 
 export const billing = {
   status: () => call<BillingStatus>("status"),
-  pay: (s: Selection) => call<{ url: string; paymentId: string }>("pay", s),
-  trial: (plan: Selection["plan"], cameras: number) => call<{ account: Account }>("trial", { plan, cameras }),
+  pay: (s: Selection, saveCard: boolean) => call<{ url: string; paymentId: string }>("pay", { ...s, saveCard }),
+  /** {url} – привязать карту на странице ЮKassa; {account} – пробный период уже начался. */
+  trial: (plan: Selection["plan"], cameras: number) => call<{ url?: string; account?: Account }>("trial", { plan, cameras }),
+  bindCard: () => call<{ url: string }>("card", { action: "bind" }),
+  unbindCard: () => call<{ account: Account }>("card", { action: "unbind" }),
   autoRenew: (on: boolean) => call<{ account: Account }>("autorenew", { on }),
 };
 
-/** Пользователь вернулся со страницы оплаты ЮKassa (?payment=return). Убираем отметку из адреса. */
-export function takePaymentReturn(): boolean {
+export type ReturnKind = "payment" | "card";
+
+/** Пользователь вернулся со страницы ЮKassa: после оплаты (?payment=return) или привязки карты (?card=return). */
+export function takePaymentReturn(): ReturnKind | null {
   const u = new URL(location.href);
-  if (u.searchParams.get("payment") !== "return") return false;
+  const kind: ReturnKind | null = u.searchParams.get("payment") === "return" ? "payment" : u.searchParams.get("card") === "return" ? "card" : null;
+  if (!kind) return null;
   u.searchParams.delete("payment");
+  u.searchParams.delete("card");
   history.replaceState(null, "", u.pathname + u.search + u.hash);
-  return true;
+  return kind;
 }

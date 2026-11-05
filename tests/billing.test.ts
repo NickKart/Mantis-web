@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  addMonths, applyCharges, applyTopup, checkSelection, emptyAccount, monthlyCharge, nextCharge, paymentAmount,
-  planForCameras, startTrial,
+  addMonths, applyCharges, applyTopup, autopayAmount, autopayAttempt, checkSelection, emptyAccount, monthlyCharge,
+  nextCharge, paymentAmount, planForCameras, startTrial,
 } from "../api/_lib/tariffs";
 
 const D = (s: string) => Date.parse(s);
@@ -111,10 +111,62 @@ describe("списания", () => {
     const paid = applyTopup(tr.account, { plan: "vitrina", cameras: 3, period: "month" }, 1350_00, "p1", now + DAY);
     expect(paid.entries).toHaveLength(1);
     expect(paid.account.status).toBe("trial");
-    expect(nextCharge(paid.account, now + DAY)).toEqual({ at: now + 7 * DAY, amount: 1350_00, enough: true });
+    expect(nextCharge(paid.account, now + DAY)).toEqual({ at: now + 7 * DAY, amount: 1350_00, enough: true, fromCard: 0 });
     const r = applyCharges(paid.account, now + 7 * DAY + 1);
     expect(r.entries[0].from).toBe(now + 7 * DAY);
     expect(r.account.status).toBe("active");
     expect(r.account.balance).toBe(0);
+  });
+});
+
+describe("автоплатёж с карты", () => {
+  const now = D("2026-11-05T12:00:00Z");
+  const card = { id: "pm-1", title: "Bank card *4444" };
+  const trial = () => {
+    const t = startTrial({ ...emptyAccount(), card }, "vitrina", 2, now);
+    if (typeof t === "string") throw new Error(t);
+    return t.account;
+  };
+
+  it("во время пробного периода не списываем", () => {
+    expect(autopayAmount(trial(), now + 3 * DAY)).toBeNull();
+  });
+
+  it("пробный закончился, баланс пуст – списать с карты месяц целиком, после зачисления подписка встык", () => {
+    const a = trial();
+    const end = now + 7 * DAY;
+    const t = end + 6 * 3600_000; // ежедневная проверка через 6 часов
+    expect(autopayAmount(a, t)).toBe(900_00);
+    expect(nextCharge(a, now + DAY)).toEqual({ at: end, amount: 900_00, enough: false, fromCard: 900_00 });
+    const r = applyTopup(applyCharges(a, t).account, { plan: "vitrina", cameras: 2, period: "month" }, 900_00, "ap-1", t, true);
+    expect(r.entries.map((e) => e.type)).toEqual(["topup", "charge"]);
+    expect(r.entries[0].note).toMatch(/Автоплатёж с карты Bank card \*4444/);
+    expect(r.account.status).toBe("active");
+    expect(r.account.paidUntil).toBe(addMonths(end, 1));
+    expect(r.account.balance).toBe(0);
+    expect(autopayAmount(r.account, t)).toBeNull();
+  });
+
+  it("часть на балансе – с карты только недостающее", () => {
+    const a = { ...trial(), balance: 300_00 };
+    expect(autopayAmount(a, now + 7 * DAY + 1)).toBe(600_00);
+  });
+
+  it("без карты, при выключенном автопродлении и через 3 дня после окончания – не списываем", () => {
+    const end = now + 7 * DAY;
+    expect(autopayAmount({ ...trial(), card: null }, end + 1)).toBeNull();
+    expect(autopayAmount({ ...trial(), autoRenew: false }, end + 1)).toBeNull();
+    expect(autopayAmount(trial(), end + 3 * DAY + 1)).toBeNull();
+  });
+
+  it("попытки – одна в сутки: 0, 1, 2", () => {
+    const a = trial();
+    const end = now + 7 * DAY;
+    expect([end + 1, end + DAY + 1, end + 2 * DAY + 5].map((t) => autopayAttempt(a, t))).toEqual([0, 1, 2]);
+  });
+
+  it("по годовой цене – пока действует год", () => {
+    const a = { ...emptyAccount(), card, plan: "set" as const, cameras: 5, paidUntil: now, annualUntil: addMonths(now, 3), status: "active" as const };
+    expect(autopayAmount(a, now + 1)).toBe(450_00 * 5);
   });
 });

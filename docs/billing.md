@@ -10,14 +10,26 @@
 - Если денег на месяц не хватает, подписка помечается «закончилась». После пополнения она продолжается: встык, если перерыв не больше 3 дней, иначе с дня оплаты.
 - Пробный период – 7 дней без оплаты, один раз на аккаунт, для Старта и Витрины.
 
+## Автоплатежи с карты (YOOKASSA_AUTOPAY=1)
+
+- «7 дней бесплатно» → `POST /api/billing/trial` → привязка карты без списания на странице ЮKassa (`POST /v3/payment_methods`) → возврат на `/?card=return`. Когда ЮKassa подтвердит карту (уведомление `payment_method.active` или проверка при открытии профиля), начинается пробный период.
+- Пользователь видит согласие: после пробного периода с карты будет списываться месячная стоимость, пока он не отключит автопродление или не отвяжет карту.
+- При обычной оплате карта тоже сохраняется (галочка «Сохранить карту», по умолчанию включена, `save_payment_method`).
+- Когда срок подписки наступил, а на балансе не хватает на месяц, сервер создаёт автоплатёж с сохранённой карты (`payment_method_id`) на недостающую сумму. Деньги зачисляются на баланс, и сразу списывается месяц. Подписка продолжается встык.
+- Попытки – раз в сутки (ежедневная проверка в 06:00 МСК и открытие профиля), не дольше 3 дней после окончания срока. Ключ идемпотентности «счёт + срок + день» не даёт списать дважды.
+- Отказ банка показывается в профиле («на карте недостаточно средств» и т. п.). Если карта больше не годится (отозвано разрешение, истёк срок), она отвязывается.
+- Привязать или отвязать карту можно в профиле (`POST /api/billing/card`).
+- В тестовом магазине ЮKassa автоплатежи работают сразу. В боевом их включает менеджер ЮKassa – до этого `YOOKASSA_AUTOPAY` не ставьте, иначе оплата с сохранением карты будет отклоняться.
+
 ## База (Firestore, проект jinpix-ac93d)
 
 Пишет только сервер (Firebase Admin). Браузер в эти коллекции не ходит.
 
 | Путь | Что хранит |
 |---|---|
-| `mantis_billing/{uid}` | balance (копейки), plan, cameras, paidUntil, annualUntil, status, trialUsed, autoRenew, email |
-| `mantis_billing/{uid}/payments/{id ЮKassa}` | amount, plan, cameras, period, status, credited, createdAt, paidAt |
+| `mantis_billing/{uid}` | balance (копейки), plan, cameras, paidUntil, annualUntil, status, trialUsed, autoRenew, card {id, title}, autopayError, email |
+| `mantis_billing/{uid}/payments/{id ЮKassa}` | amount, plan, cameras, period, kind (checkout / autopay), status, credited, createdAt, paidAt |
+| `mantis_billing/{uid}/cards/{id способа оплаты}` | привязки карт: status (pending / active / inactive), purpose (trial / bind), plan, cameras |
 | `mantis_billing/{uid}/ledger/{id}` | журнал: topup / charge / trial, amount, balanceAfter, from, to, note |
 
 В правилах Firestore закройте эти коллекции от браузера (добавьте перед общими правилами, если они есть):
@@ -35,6 +47,7 @@ match /mantis_billing/{uid}/{document=**} {
 | `FIREBASE_SERVICE_ACCOUNT` | Firebase Console → Project settings → Service accounts → Generate new private key. Содержимое JSON целиком. |
 | `YOOKASSA_SHOP_ID` | Личный кабинет ЮKassa → Интеграция → Ключи API (shopId) |
 | `YOOKASSA_SECRET_KEY` | Там же, секретный ключ. Для проверки можно сначала взять ключи тестового магазина. |
+| `YOOKASSA_AUTOPAY` | `1` – включить автоплатежи с карты (привязка карты для пробного периода, сохранение карты при оплате). Для боевого магазина – только после подключения автоплатежей менеджером ЮKassa. |
 | `YOOKASSA_VAT_CODE` | Необязательно. Если задан (например `1` – без НДС), к платежу прикладывается чек по 54-ФЗ на почту пользователя. |
 | `CRON_SECRET` | Любая случайная строка от 16 символов. Vercel сам передаёт её в ежедневный вызов списания. |
 | `APP_URL` | Необязательно. Адрес приложения для возврата после оплаты, по умолчанию https://mantis-web-snowy.vercel.app |
@@ -43,4 +56,4 @@ match /mantis_billing/{uid}/{document=**} {
 
 ## Уведомления ЮKassa
 
-Личный кабинет ЮKassa → Интеграция → HTTP-уведомления → URL `https://mantis-web-snowy.vercel.app/api/yookassa/webhook`, события `payment.succeeded` и `payment.canceled`.
+Личный кабинет ЮKassa → Интеграция → HTTP-уведомления → URL `https://mantis-web-snowy.vercel.app/api/yookassa/webhook`, события `payment.succeeded`, `payment.canceled` и `payment_method.active`.

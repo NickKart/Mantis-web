@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { changeEmail, changePassword, friendlyError, resetPassword, signIn, signOut, signUp } from "../cloud/firebase";
 import { channelTitle } from "../multi/channel";
 import { listRecordings, type RecordingMeta } from "../twin/store";
-import { takePaymentReturn } from "./billing";
+import { type ReturnKind, takePaymentReturn } from "./billing";
 import { core } from "./core";
 import { Subscription } from "./Subscription";
 import { onboarding } from "./progress";
@@ -229,7 +229,7 @@ function Palette(p: { onClose: () => void; onProfile: () => void }) {
 }
 
 // ---------------------------------------------------------------- профиль
-function ProfileModal(p: { onClose: () => void; returned?: boolean }) {
+function ProfileModal(p: { onClose: () => void; returned?: ReturnKind | null }) {
   const c = useCore();
   const st = c.account.state;
   return st.user
@@ -281,7 +281,7 @@ function SignInModal(p: { onClose: () => void }) {
 }
 
 /** Профиль вошедшего: почта и пароль (можно сменить) и подписка. */
-function AccountModal(p: { email: string; returned?: boolean; onClose: () => void }) {
+function AccountModal(p: { email: string; returned?: ReturnKind | null; onClose: () => void }) {
   const c = useCore();
   const [email, setEmail] = useState(p.email);
   const [password, setPassword] = useState("");
