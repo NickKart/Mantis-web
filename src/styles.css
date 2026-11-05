@@ -1,5 +1,5 @@
 /* Mantis web. Один тёмный «приборный» вид в цветах иконки: ночной синий, лёд, зелёные глаза богомола.
-   Раскладка: сцена с видео слева (в рамке видоискателя), панель шагов справа; на узком экране — друг под другом. */
+   Раскладка: сцена с видео слева (в рамке видоискателя), панель шагов справа; на узком экране – друг под другом. */
 :root {
   --bg: #0a1230;
   --bg-2: #0e1839;
@@ -13,7 +13,7 @@
   --accent-ink: #0b1d0e;
   --accent-soft: rgba(143, 227, 109, 0.14);
   --danger: #ff7a66;
-  /* цвета наложения — как в iOS-приложении */
+  /* цвета наложения – как в iOS-приложении */
   --ov-gray: #9aa3b5;
   --ov-white: #ffffff;
   --ov-green: #5bd97f;
@@ -728,7 +728,7 @@ body.cam-focused .sidebar { display: none; }
 .tw-alias { width: 160px; padding: 7px 10px; }
 .tw-setup-dir { align-items: center; }
 .tw-setup-dir .seg { width: min(520px, 100%); }
-/* Сохранить / Отмена — рядом, справа, обычного размера */
+/* Сохранить / Отмена – рядом, справа, обычного размера */
 .tw-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .tw-actions .btn { min-width: 120px; }
 
@@ -777,7 +777,7 @@ body.cam-focused .sidebar { display: none; }
 .cam-tile.drop-target { outline: 2px dashed var(--ov-cyan); outline-offset: 3px; }
 .cam-tile .cam-head .dot { box-shadow: none; }
 .tw-name .input { padding: 7px 10px; }
-/* «Удалить» на карточке — как остальные кнопки, но красная */
+/* «Удалить» на карточке – как остальные кнопки, но красная */
 .btn.danger-outline { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 55%, transparent); }
 .btn.danger-outline:hover { background: color-mix(in srgb, var(--danger) 14%, transparent); border-color: var(--danger); }
 /* стеллажи и витрины в редакторе плана */

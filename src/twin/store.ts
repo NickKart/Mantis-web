@@ -1,5 +1,5 @@
-// Хранилище двойника в браузере: план и статистика дня — localStorage, картинки подложек и записи
-// (с копией видео) — IndexedDB. Как папка Twin/ в Application Support у Mantis для Mac.
+// Хранилище двойника в браузере: план и статистика дня – localStorage, картинки подложек и записи
+// (с копией видео) – IndexedDB. Как папка Twin/ в Application Support у Mantis для Mac.
 
 import { type RecordingData, Timeline, normalizePlan } from "./plan";
 
@@ -91,6 +91,10 @@ export interface RecordingMeta {
   people: number;
   peak: number;
   hasVideo: boolean;
+  /** Итоги записи: прошли мимо, притормозили, посмотрели, вернулись, зашли (новый интерфейс). */
+  totals?: number[];
+  /** Камеры записи (подписи). */
+  cameras?: string[];
 }
 
 export const SOURCE_TITLES: Record<RecSource, string> = { video: "Видео", live: "Живые камеры", demo: "Демо" };
@@ -112,6 +116,8 @@ export async function saveRecording(
   const meta: RecordingMeta = {
     id, name, created: Date.now(), source, duration: data.frames[data.frames.length - 1]?.t ?? 0,
     people: tl.stats.people, peak: tl.stats.peak, hasVideo: !!video,
+    totals: data.counts?.length ? data.counts[data.counts.length - 1].slice(1) : undefined,
+    cameras: data.cameras.map((c) => c.name),
   };
   try {
     await tx("recdata", "readwrite", (s) => s.put(data, id));

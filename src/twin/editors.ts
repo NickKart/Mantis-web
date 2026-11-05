@@ -151,7 +151,7 @@ type Drag =
 
 export interface PlanEditResult {
   plan: TwinPlan;
-  /** undefined — подложка не менялась; null — убрана. */
+  /** undefined – подложка не менялась; null – убрана. */
   background?: Blob | null;
 }
 
@@ -169,8 +169,8 @@ export function openPlanEditor(o: PlanEditorInput): Promise<PlanEditResult | nul
 }
 
 /**
- * Встроенный редактор — шаг «План» раздела «Мониторинг»: без кнопок окна, изменения сохраняются сами
- * (через полсекунды после правки; подложка — сразу). Как PlanEditorView(inline: true) на Mac.
+ * Встроенный редактор – шаг «План» раздела «Мониторинг»: без кнопок окна, изменения сохраняются сами
+ * (через полсекунды после правки; подложка – сразу). Как PlanEditorView(inline: true) на Mac.
  */
 export function mountPlanEditor(container: HTMLElement, o: PlanEditorInput, onSave: (r: PlanEditResult) => void): void {
   void planEditor(o, { container, onSave });
@@ -342,7 +342,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
       }
       const m = f.meters(x, y);
       for (const st of [...draft.stands].reverse()) if (pointInPolygon(m, standCorners(st, 0.1))) return { t: "stand", id: st.id, orig: st.pos };
-      // выбранный стеллаж — первым (если лежит поверх другого)
+      // выбранный стеллаж – первым (если лежит поверх другого)
       const fxOrder = [...draft.fixtures.filter((q) => q.id === selected), ...[...draft.fixtures].reverse().filter((q) => q.id !== selected)];
       for (const fx of fxOrder) if (pointInPolygon(m, fixtureCorners(fx, 0.08))) return { t: "fixture", id: fx.id, orig: fx.pos };
       for (const k of ["door", "showcase"] as SpanKind[]) {
@@ -370,7 +370,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
         draw();
         return;
       }
-      // «+» на стороне — вставляем угол и тянем его
+      // «+» на стороне – вставляем угол и тянем его
       if (h.t === "corner" && h.i < 0) {
         const z = draft.zones.find((zz) => zz.id === (h as { id: string }).id)!;
         const after = -h.i - 1;
@@ -583,7 +583,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
         draw();
       });
       nodes.push(section("Размеры плана", row(fw.root, fd.root),
-        el("p", "hint-small", "Весь план — магазин и улица перед ним. Если поменять размер, тепловая карта дня начнётся заново.")));
+        el("p", "hint-small", "Весь план – магазин и улица перед ним. Если поменять размер, тепловая карта дня начнётся заново.")));
 
       // магазин
       const shopNodes: Node[] = [];
@@ -647,7 +647,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
         shopNodes.push(button("Отметить магазин", "btn primary wide", () => addShop()));
       }
       nodes.push(section("Магазин", ...shopNodes, el("p", "hint-small", hasShop(draft)
-        ? "Углы тяните на плане, «+» на стороне добавляет угол — так задаётся любая форма. Витрина и дверь — на стенах магазина."
+        ? "Углы тяните на плане, «+» на стороне добавляет угол – так задаётся любая форма. Витрина и дверь – на стенах магазина."
         : "Отметьте магазин, затем витрину и дверь на его стенах. В демо люди проходят внутрь только через дверь.")));
 
       // придуманные камеры (демо)
@@ -681,7 +681,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
           let n = o.cameras.length + 1;
           while (o.cameras.some((c) => c.name === `Камера ${n}`)) n++;
           const id = `demo-cam-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-          // новая камера — у нижнего края, смотрит вверх; следующие — правее/левее, чтобы не легли друг на друга
+          // новая камера – у нижнего края, смотрит вверх; следующие – правее/левее, чтобы не легли друг на друга
           const k = o.cameras.length;
           const fx = k === 0 ? 0.5 : 0.15 + 0.7 * ((0.5 + k * 0.382) % 1);
           draft.calibrations[id] = {
@@ -696,7 +696,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
         });
         add.classList.add("wide");
         nodes.push(section("Камеры", add, ...(o.cameras.length ? [list] : []),
-          el("p", "hint-small", o.cameras.length ? "Тяните значок — место, белую ручку — поворот, точки на дуге — дальность и угол обзора." : "Придуманные камеры: поставьте на план и поверните — в демо будет видно, кого какая камера видит.")));
+          el("p", "hint-small", o.cameras.length ? "Тяните значок – место, белую ручку – поворот, точки на дуге – дальность и угол обзора." : "Придуманные камеры: поставьте на план и поверните – в демо будет видно, кого какая камера видит.")));
       }
 
       // выбранная камера
@@ -724,18 +724,18 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
           toShowcase.append(el("span", "field-label", "До витрины"), tsv);
           const tsRefresh = { refresh: () => {
             const nf = nearestFixture(curMark(), draft);
-            tsv.textContent = nf ? `${fmt1(nf[1])} м` : "—";
+            tsv.textContent = nf ? `${fmt1(nf[1])} м` : "–";
           } };
           tsRefresh.refresh();
           liveFields.push(ffov, frange, fang, tsRefresh);
           nodes.push(section(`Камера · ${ref.name}`, row(ffov.root, frange.root), row(fang.root, toShowcase),
-            ...(o.editCameras ? [] : [button("Авто — по привязке", "btn small", () => {
+            ...(o.editCameras ? [] : [button("Авто – по привязке", "btn small", () => {
               const c = cal();
               c.cameraPos = c.cameraAngle = c.fovDeg = c.rangeM = null;
               refreshPanel();
               draw();
             })]),
-            el("p", "hint-small", "Тяните значок — место, белую ручку — поворот, точку на дуге — дальность, точки на краях — угол обзора.")));
+            el("p", "hint-small", "Тяните значок – место, белую ручку – поворот, точку на дуге – дальность, точки на краях – угол обзора.")));
         }
       }
 
@@ -758,7 +758,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
             selected = c.id;
             refreshPanel();
             changed();
-          }, "Копия рядом — удобно для ряда стеллажей"),
+          }, "Копия рядом – удобно для ряда стеллажей"),
           button("Убрать", "link danger", () => {
             draft.fixtures = draft.fixtures.filter((q) => q.id !== fx.id);
             if (on) selected = null;
@@ -797,14 +797,14 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
           }
           const box = el("div", "tw-fx-edit");
           box.append(row(fl.root, fdp.root), row(fa.root, kinds),
-            el("p", "hint-small", fx.kind === "showcase" ? "Поворот — белой ручкой: лицевая (белая) сторона смотрит на ручку." : "Поворот — белой ручкой на плане. Покупатели подходят с обеих сторон."));
+            el("p", "hint-small", fx.kind === "showcase" ? "Поворот – белой ручкой: лицевая (белая) сторона смотрит на ручку." : "Поворот – белой ручкой на плане. Покупатели подходят с обеих сторон."));
           fxList.append(box);
         }
       });
       const fxAdd = row(button("+ Стеллаж", "btn small", () => addFixture("rack"), "Добавить стеллаж"),
         button("+ Витрина", "btn small", () => addFixture("showcase"), "Добавить витрину (прилавок) внутри магазина или на плане"));
       nodes.push(section("Стеллажи и витрины", fxList, fxAdd,
-        el("p", "hint-small", "Ставьте внутри магазина или в любом месте плана. Белая сторона витрины — лицевая. В демо прохожие обходят их и останавливаются посмотреть.")));
+        el("p", "hint-small", "Ставьте внутри магазина или в любом месте плана. Белая сторона витрины – лицевая. В демо прохожие обходят их и останавливаются посмотреть.")));
 
       // штендеры
       const stList = el("div", "tw-list");
@@ -830,7 +830,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
         stList.append(r);
       });
       nodes.push(section("Выносная реклама", stList, button("Добавить штендер", "btn small", () => addStand()),
-        el("p", "hint-small", "Штендеры на улице. Поворот — белой ручкой на плане, фасад смотрит на ручку. В демо прохожие их обходят и иногда останавливаются почитать.")));
+        el("p", "hint-small", "Штендеры на улице. Поворот – белой ручкой на плане, фасад смотрит на ручку. В демо прохожие их обходят и иногда останавливаются почитать.")));
 
       // зоны
       const zList = el("div", "tw-list");
@@ -865,7 +865,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
         zList.append(r);
       }
       nodes.push(section("Зоны", zList, button("Добавить зону", "btn small", () => addZone()),
-        el("p", "hint-small", "Витрина снаружи, касса, стеллажи, примерочная — по каждой зоне считаются заходы и время.")));
+        el("p", "hint-small", "Витрина снаружи, касса, стеллажи, примерочная – по каждой зоне считаются заходы и время.")));
 
       const sz = draft.zones.find((z) => z.id === selected);
       if (sz) {
@@ -884,7 +884,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
             refreshPanel();
             draw();
           }), minus),
-          el("p", "hint-small", "Размер меняет зону целиком, сохраняя форму. Углы — тяните на плане.")));
+          el("p", "hint-small", "Размер меняет зону целиком, сохраняя форму. Углы – тяните на плане.")));
       }
 
       // подложка
@@ -927,7 +927,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
         });
         bgNodes.push(el("span", "field-label", "Яркость подложки"), op);
       }
-      nodes.push(section("Подложка", ...bgNodes, el("p", "hint-small", "Картинка плана растягивается на весь план — подберите размеры под неё.")));
+      nodes.push(section("Подложка", ...bgNodes, el("p", "hint-small", "Картинка плана растягивается на весь план – подберите размеры под неё.")));
       panel.replaceChildren(...nodes);
       liveRefresh();
     }
@@ -968,7 +968,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
       refreshPanel();
       draw();
     }
-    /** Новый стеллаж или витрина: в магазине (если есть), иначе посередине плана — на свободное место. */
+    /** Новый стеллаж или витрина: в магазине (если есть), иначе посередине плана – на свободное место. */
     function addFixture(kind: FixtureKind): void {
       let center = { x: draft.widthM / 2, y: draft.depthM / 2 };
       let box = { x0: 0.5, x1: draft.widthM - 0.5, y0: 0.5, y1: draft.depthM - 0.5 };
@@ -1031,7 +1031,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
     function autosave(): void {
       if (!inline) return;
       if (bgBlob !== undefined) {
-        // подложка — сразу
+        // подложка – сразу
         clearTimeout(saveTimer);
         lastSaved = JSON.stringify(draft);
         inline.onSave({ plan: cleaned(), background: bgBlob });
@@ -1041,7 +1041,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
       if (JSON.stringify(draft) === lastSaved) return;
       clearTimeout(saveTimer);
       saveTimer = window.setTimeout(() => {
-        if (drag) return autosave(); // тянем — сохраним, когда отпустим
+        if (drag) return autosave(); // тянем – сохраним, когда отпустим
         lastSaved = JSON.stringify(draft);
         inline.onSave({ plan: cleaned() });
       }, 500);
@@ -1054,7 +1054,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
     head.append(el("h2", undefined, "План и зоны"), button("✕", "icon-btn", () => dialog.close()));
     const body = el("div", "tw-editor-body");
     const left = el("div", "tw-editor-left");
-    const hint = el("p", "hint-small faint", "Тяните угол — размер и форма · «+» на стороне — новый угол · тяните магазин, зону, витрину, дверь, штендер или камеру — перенос · белая ручка ↻ — поворот");
+    const hint = el("p", "hint-small faint", "Тяните угол – размер и форма · «+» на стороне – новый угол · тяните магазин, зону, витрину, дверь, штендер или камеру – перенос · белая ручка ↻ – поворот");
     left.append(canvas, hint);
     body.append(left, panel);
     const actions = el("div", "tw-actions");
@@ -1082,7 +1082,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
     if (inline) {
       body.classList.add("tw-editor-inline");
       inline.container.replaceChildren(body);
-      // контейнер очистили (шаг закрыт, план пересобран) — сохранить несохранённое и отключиться
+      // контейнер очистили (шаг закрыт, план пересобран) – сохранить несохранённое и отключиться
       const mo = new MutationObserver(() => {
         if (body.isConnected) return;
         mo.disconnect();
@@ -1117,8 +1117,8 @@ export interface StillFrame {
 export const HANDLE_COLORS = ["#ff6b6b", "#5bd97f", "#47d7f0", "#ffd23f"];
 
 /**
- * Окно привязки. Возвращает привязку, null — «Убрать привязку», undefined — отмена.
- * still() вызывается при каждой перерисовке (для живой камеры кадр обновляется), onTick — раз в 400 мс.
+ * Окно привязки. Возвращает привязку, null – «Убрать привязку», undefined – отмена.
+ * still() вызывается при каждой перерисовке (для живой камеры кадр обновляется), onTick – раз в 400 мс.
  */
 export function openCalibration(o: {
   title: string;
@@ -1135,18 +1135,18 @@ export function openCalibration(o: {
   markName?: () => string;
   /** Цвет камеры, если его можно поменять в окне (читается при каждой перерисовке). */
   colorOf?: () => number;
-  /** Зона витрины на кадре — 4 угла в долях кадра; двигаются на кадре, массив меняется на месте. */
+  /** Зона витрины на кадре – 4 угла в долях кадра; двигаются на кадре, массив меняется на месте. */
   zone?: Pt[];
 }): Promise<CameraCalibration | null | undefined> {
   return new Promise((resolve) => {
     const plan = o.plan;
     const dialog = el("dialog", "dialog tw-editor");
     document.body.append(dialog);
-    // новая привязка — по сектору (камера на плане, поворот, угол, дальность); по полу — если в кадре виден пол
+    // новая привязка – по сектору (камера на плане, поворот, угол, дальность); по полу – если в кадре виден пол
     const cal: CameraCalibration = structuredClone(o.initial ?? {
       ...initialCalibration(plan), mode: "sector", cameraPos: { x: plan.widthM / 2, y: plan.depthM - 0.5 }, cameraAngle: -Math.PI / 2, rangeM: 6,
     });
-    // у старых привязок по сектору точек пола может не быть — подставляем по умолчанию
+    // у старых привязок по сектору точек пола может не быть – подставляем по умолчанию
     if (cal.imagePts.length < 4 || cal.planPts.length < 4) {
       const d = initialCalibration(plan);
       if (cal.imagePts.length < 4) cal.imagePts = d.imagePts;
@@ -1167,7 +1167,7 @@ export function openCalibration(o: {
     function drawImage(): void {
       const st = o.still();
       const W = st.width || 1280, H = st.height || 720;
-      // высота окон — по пропорциям кадра (без чёрных полос), но в пределах экрана
+      // высота окон – по пропорциям кадра (без чёрных полос), но в пределах экрана
       const pw = imgCanvas.parentElement?.clientWidth ?? 0;
       if (pw > 0) {
         const hh = `${Math.round(Math.max(240, Math.min(((pw - 24) * H) / W + 24, window.innerHeight - 330)))}px`;
@@ -1380,7 +1380,7 @@ export function openCalibration(o: {
       return [e.clientX - r.left, e.clientY - r.top] as const;
     };
 
-    // ручки на кадре: 0..3 — точки пола (по полу), 4..7 — углы зоны витрины
+    // ручки на кадре: 0..3 – точки пола (по полу), 4..7 – углы зоны витрины
     imgCanvas.addEventListener("pointerdown", (e) => {
       const [x, y] = localOf(imgCanvas, e);
       const px = (p: Pt) => [imgRect.x + p.x * imgRect.w, imgRect.y + p.y * imgRect.h] as const;
@@ -1495,11 +1495,11 @@ export function openCalibration(o: {
       redraw();
     });
     angleBox.append(el("span", "small faint", "↻"), angleIn, el("span", "small faint", "°"));
-    const warn = el("span", "tw-warn", "Точки пересекаются — расставьте по кругу");
+    const warn = el("span", "tw-warn", "Точки пересекаются – расставьте по кругу");
     const autoBtn = button("Авто", "btn small", () => {
       cal.cameraPos = cal.cameraAngle = cal.fovDeg = cal.rangeM = null;
       redraw();
-    }, "Место и поворот камеры — по привязке");
+    }, "Место и поворот камеры – по привязке");
 
     function syncFields(): void {
       const sector = isSector(cal);
@@ -1512,8 +1512,8 @@ export function openCalibration(o: {
       });
       const valid = calibrationValid(cal);
       const untouched = floorPointsUntouched(cal);
-      warn.textContent = !valid ? "Точки пересекаются — расставьте по кругу"
-        : "Точки на кадре стоят по умолчанию — поставьте их на пол или выберите «По сектору» (если пола в кадре нет)";
+      warn.textContent = !valid ? "Точки пересекаются – расставьте по кругу"
+        : "Точки на кадре стоят по умолчанию – поставьте их на пол или выберите «По сектору» (если пола в кадре нет)";
       warn.hidden = sector || (valid && !untouched);
       angleBox.hidden = !sector && !valid;
       const m = mark();
@@ -1542,7 +1542,7 @@ export function openCalibration(o: {
       p.append(el("p", "eyebrow", title), c);
       return p;
     };
-    panes.append(pane(o.zone ? "Кадр · голубые углы — зона витрины" : "Кадр", imgCanvas), pane("План", planCanvas));
+    panes.append(pane(o.zone ? "Кадр · голубые углы – зона витрины" : "Кадр", imgCanvas), pane("План", planCanvas));
     coords.append(angleBox, warn, autoBtn);
     const actions = el("div", "tw-actions");
     const saveBtn = button("Сохранить", "btn primary", () => {

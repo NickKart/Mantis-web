@@ -18,7 +18,7 @@ export const DEFAULT_ENTRANCE: Pt[] = [{ x: 0.2, y: 0.8 }, { x: 0.8, y: 0.8 }];
 
 export const defaultMarkup = (): Markup => ({
   zone: FULL_FRAME.map((p) => ({ ...p })),
-  lineEnabled: false, // по умолчанию линий нет — включаются вручную
+  lineEnabled: false, // по умолчанию линий нет – включаются вручную
   line: VERTICAL_LINE.map((p) => ({ ...p })),
   entranceEnabled: false,
   entrance: DEFAULT_ENTRANCE.map((p) => ({ ...p })),
@@ -142,7 +142,7 @@ export function drawPeople(ctx: CanvasRenderingContext2D, boxes: OverlayBox[], n
     ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
     ctx.setLineDash([]);
 
-    // смотрит сейчас — кольцо у головы
+    // смотрит сейчас – кольцо у головы
     if (b.lookingNow && b.keypoints) {
       const nose = b.keypoints[0];
       ctx.beginPath();

@@ -1,4 +1,4 @@
-// Цифровой двойник точки — данные и геометрия. Порт TwinModel.swift (macOS).
+// Цифровой двойник точки – данные и геометрия. Порт TwinModel.swift (macOS).
 // План помещения или улицы в метрах; камеры пилота привязаны к плану по 4 точкам на полу (гомография)
 // или «по сектору» (место, поворот, угол обзора, дальность). Ноги людей из кадра переводятся в координаты плана.
 
@@ -13,7 +13,7 @@ const hypot = Math.hypot;
 /** Проективное преобразование плоскости: 3×3 по строкам, h33 = 1. */
 export type Homography = number[];
 
-/** По 4 парам точек (src → dst). null — точки вырождены. */
+/** По 4 парам точек (src → dst). null – точки вырождены. */
 export function homographyFrom(src: Pt[], dst: Pt[]): Homography | null {
   if (src.length !== 4 || dst.length !== 4) return null;
   const a: number[][] = [];
@@ -62,13 +62,13 @@ export function hinverse(m: Homography): Homography | null {
 export interface CameraCalibration {
   imagePts: Pt[];
   planPts: Pt[];
-  /** Где висит камера на плане (метры); нет — оценка по привязке. */
+  /** Где висит камера на плане (метры); нет – оценка по привязке. */
   cameraPos?: Pt | null;
-  /** Куда повёрнута камера (радианы); нет — по привязке. */
+  /** Куда повёрнута камера (радианы); нет – по привязке. */
   cameraAngle?: number | null;
   fovDeg?: number | null;
   rangeM?: number | null;
-  /** "sector" — привязка по сектору (пола в кадре нет). */
+  /** "sector" – привязка по сектору (пола в кадре нет). */
   mode?: string | null;
 }
 
@@ -93,7 +93,7 @@ export interface TwinStand {
   angle: number;
 }
 
-/** Стеллаж или витрина (прилавок) — в магазине или просто на плане: прямоугольник с местом, поворотом и размером. */
+/** Стеллаж или витрина (прилавок) – в магазине или просто на плане: прямоугольник с местом, поворотом и размером. */
 export type FixtureKind = "rack" | "showcase";
 export interface TwinFixture {
   id: string;
@@ -119,7 +119,7 @@ export interface TwinPlan {
   showcases: WallSpan[];
   doors: WallSpan[];
   stands: TwinStand[];
-  /** Стеллажи и витрины — в магазине или на плане. */
+  /** Стеллажи и витрины – в магазине или на плане. */
   fixtures: TwinFixture[];
 }
 
@@ -153,11 +153,11 @@ export function standCorners(s: TwinStand, inflate = 0): Pt[] {
   return [P(-hw, -hd), P(hw, -hd), P(hw, hd), P(-hw, hd)].map((q) => P(s.pos.x + q.x * c - q.y * sn, s.pos.y + q.x * sn + q.y * c));
 }
 
-/** Лицевая сторона (у витрины — откуда смотрят; стеллаж — с обеих сторон) и направление вдоль. */
+/** Лицевая сторона (у витрины – откуда смотрят; стеллаж – с обеих сторон) и направление вдоль. */
 export const fixtureFacing = (f: TwinFixture): Pt => P(-Math.sin(f.angle), Math.cos(f.angle));
 export const fixtureAlong = (f: TwinFixture): Pt => P(Math.cos(f.angle), Math.sin(f.angle));
 
-/** Углы (с запасом inflate); лицевая сторона — между углами 2 и 3. */
+/** Углы (с запасом inflate); лицевая сторона – между углами 2 и 3. */
 export function fixtureCorners(f: TwinFixture, inflate = 0): Pt[] {
   const hw = f.width / 2 + inflate, hd = f.depth / 2 + inflate;
   const c = Math.cos(f.angle), sn = Math.sin(f.angle);
@@ -252,7 +252,7 @@ export function freeSpan(p: TwinPlan, e: number, lengthM: number): WallSpan | nu
   return null;
 }
 
-/** Стены, через которые не пройти: все стороны магазина, кроме проёмов дверей (витрины — тоже стена). */
+/** Стены, через которые не пройти: все стороны магазина, кроме проёмов дверей (витрины – тоже стена). */
 export function walls(p: TwinPlan): [Pt, Pt][] {
   if (!hasShop(p)) return [];
   const out: [Pt, Pt][] = [];
@@ -355,7 +355,7 @@ export function isSimpleQuad(q: Pt[]): boolean {
 
 /**
  * Привязка по полу, где 4 точки на кадре так и стоят по умолчанию (их не двигали): по ней люди легли бы
- * на план в случайное место — такую камеру на план не выводим, пока точки не расставят или не выберут «по сектору».
+ * на план в случайное место – такую камеру на план не выводим, пока точки не расставят или не выберут «по сектору».
  */
 export function floorPointsUntouched(c: CameraCalibration): boolean {
   if (isSector(c)) return false;
@@ -366,7 +366,7 @@ export function floorPointsUntouched(c: CameraCalibration): boolean {
 /** Камера передаёт людей на план: привязка верна и (по полу) точки расставлены. */
 export const calibrationUsable = (c: CameraCalibration) => calibrationValid(c) && !floorPointsUntouched(c);
 
-/** По полу — четырёхугольник без самопересечений с обеих сторон; по сектору — всегда. */
+/** По полу – четырёхугольник без самопересечений с обеих сторон; по сектору – всегда. */
 export const calibrationValid = (c: CameraCalibration) =>
   isSector(c) || (calHomography(c) !== null && isSimpleQuad(c.imagePts) && isSimpleQuad(c.planPts));
 
@@ -409,7 +409,7 @@ export class CameraProjector {
     return P(s.pos.x + Math.cos(a) * dist, s.pos.y + Math.sin(a) * dist);
   }
 
-  /** Точка кадра (доли) → план (метры); null — выше горизонта (или привязка по сектору). */
+  /** Точка кадра (доли) → план (метры); null – выше горизонта (или привязка по сектору). */
   project(p: Pt): Pt | null {
     if (!this.h) return null;
     const r = hmap(this.h, p);
@@ -491,7 +491,7 @@ export function cameraMark(name: string, colorIndex: number, c: CameraCalibratio
   };
 }
 
-/** Сколько метров луч из камеры под углом a идёт внутри плана (до края). Камера вне плана — до выхода из него. */
+/** Сколько метров луч из камеры под углом a идёт внутри плана (до края). Камера вне плана – до выхода из него. */
 export function rayInside(m: CameraMark, a: number): number {
   const dx = Math.cos(a), dy = Math.sin(a), { x, y } = m.position;
   let t0 = -Infinity, t1 = Infinity;
@@ -516,7 +516,7 @@ export const ray = (m: CameraMark, a: number, d: number) => {
   return P(m.position.x + Math.cos(a) * l, m.position.y + Math.sin(a) * l);
 };
 
-/** Ближайшая точка витрины (если нет — стены магазина) и расстояние до неё. */
+/** Ближайшая точка витрины (если нет – стены магазина) и расстояние до неё. */
 export function nearestFixture(m: CameraMark, plan: TwinPlan): [Pt, number] | null {
   let segs: [Pt, Pt][] = showcaseLines(plan).map((l) => [l[0], l[1]]);
   for (const f of plan.fixtures ?? []) {
@@ -581,7 +581,7 @@ export interface TwinPerson {
   cameras: number;
   /** Скорость по плану, м/с. */
   speed: number | null;
-  /** Отметки: 1 — вернулся к витрине, 2 — зашёл в магазин (битами). */
+  /** Отметки: 1 – вернулся к витрине, 2 – зашёл в магазин (битами). */
   flags?: number;
 }
 
@@ -610,9 +610,9 @@ export interface RecPerson {
   i: string;
   x: number;
   y: number;
-  /** 0 — идёт, 1 — прошёл, 2 — притормозил, 3 — смотрит. */
+  /** 0 – идёт, 1 – прошёл, 2 – притормозил, 3 – смотрит. */
   s: number;
-  /** Отметки (FLAG_RETURNED, FLAG_ENTERED); нет — 0. */
+  /** Отметки (FLAG_RETURNED, FLAG_ENTERED); нет – 0. */
   f?: number;
 }
 export interface RecFrame {
@@ -628,7 +628,7 @@ export interface RecordingData {
   plan: TwinPlan;
   cameras: RecCameraRef[];
   frames: RecFrame[];
-  /** Счётчики по ходу записи: [t, прошли мимо, притормозили, посмотрели, вернулись, зашли] — с начала записи. */
+  /** Счётчики по ходу записи: [t, прошли мимо, притормозили, посмотрели, вернулись, зашли] – с начала записи. */
   counts?: number[][];
 }
 
@@ -737,7 +737,7 @@ export class Timeline {
   }
 }
 
-/** Тепло «до текущего момента» с кэшем: вперёд — досчитывает, назад — пересчитывает. */
+/** Тепло «до текущего момента» с кэшем: вперёд – досчитывает, назад – пересчитывает. */
 export class HeatCursor {
   grid: number[] = [];
   maxValue = 0;

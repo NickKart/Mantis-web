@@ -7,7 +7,7 @@ import { IcClose } from "./icons";
 /** Перерисовывать компонент при изменениях в ядре (не чаще раза в кадр). */
 export function useCore(): typeof core {
   const [, force] = useReducer((n: number) => n + 1, 0);
-  useEffect(() => core.subscribe(force), []);
+  useEffect(() => core.subscribe(() => force(undefined)), []);
   return core;
 }
 

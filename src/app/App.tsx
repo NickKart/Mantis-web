@@ -130,7 +130,7 @@ function SystemBox() {
   const det = c.detectorState;
   const fps = c.pilot.running ? c.pilot.fps : 0;
   const detText = det === "ready" ? `Нейросеть · ${c.backendShort}${fps ? ` · ${Math.round(fps)} к/с` : ""}`
-    : det === "loading" ? "Нейросеть загружается…" : det === "error" ? "Нейросеть не загрузилась" : "Нейросеть · загрузится при запуске";
+    : det === "loading" ? "Нейросеть загружается…" : det === "error" ? "Нейросеть не загрузилась" : "Нейросеть · не запущена";
   let cloud: string, cloudLed: string;
   if (!st.user) {
     cloud = "Облако · вход не выполнен";

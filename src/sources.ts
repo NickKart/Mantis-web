@@ -8,7 +8,7 @@ export interface LiveSource {
   height: number;
   /** Свежий кадр. Для IP-камеры ждёт новый кадр, если прошлый уже отдан. */
   grab(): Promise<ImageBitmap>;
-  /** Видео-элемент камеры компьютера — для быстрого предпросмотра. */
+  /** Видео-элемент камеры компьютера – для быстрого предпросмотра. */
   video?: HTMLVideoElement;
   /** Источник отвалился (камеру выдернули, мост перестал отвечать). */
   lost(): boolean;
@@ -118,7 +118,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Подключить IP-камеру: мост запускает ffmpeg, ждём первый кадр (до timeoutMs).
- * onStatus — что сейчас происходит (для подписи «Подключаюсь…»).
+ * onStatus – что сейчас происходит (для подписи «Подключаюсь…»).
  */
 export async function openIpCamera(
   cfg: IpCameraConfig, onStatus?: (s: string) => void, timeoutMs = 25_000, cancelled: () => boolean = () => false,
@@ -131,7 +131,7 @@ export async function openIpCamera(
   let seq = 0;
   while (!first) {
     if (cancelled()) {
-      // подключение больше не нужно (окно закрыли, пилот остановили) — не ждём 25 с
+      // подключение больше не нужно (окно закрыли, пилот остановили) – не ждём 25 с
       await api(`streams/${id}`, { method: "DELETE" }).catch(() => undefined);
       throw new Error("подключение отменено");
     }
@@ -142,7 +142,7 @@ export async function openIpCamera(
       break;
     }
     st = (await r.json().catch(() => st)) as StreamStatus;
-    // ошибка, на которую нет смысла ждать (пароль, путь) — сразу говорим
+    // ошибка, на которую нет смысла ждать (пароль, путь) – сразу говорим
     if (st.state === "error" && st.error && /логин|пароль|адрес потока|отказала/.test(st.error)) {
       await api(`streams/${id}`, { method: "DELETE" }).catch(() => undefined);
       throw new Error(st.error);
@@ -171,7 +171,7 @@ export async function openIpCamera(
       const t0 = Date.now();
       for (;;) {
         if (closed) throw new Error("Камера отключена");
-        const stale = Date.now() - t0 > 3000; // камера «замерла» — отдадим прошлый кадр, чтобы подсчёт шёл
+        const stale = Date.now() - t0 > 3000; // камера «замерла» – отдадим прошлый кадр, чтобы подсчёт шёл
         frameUrl.search = stale ? "" : `?after=${seq}`;
         const r = await fetch(frameUrl, { cache: "no-store" });
         if (r.status === 200) {
@@ -191,7 +191,7 @@ export async function openIpCamera(
     },
     lost: () => closed || Date.now() - lastOk > 30_000,
     close() {
-      if (closed) return; // мост считает зрителей — закрываем один раз
+      if (closed) return; // мост считает зрителей – закрываем один раз
       closed = true;
       void api(`streams/${id}`, { method: "DELETE" }).catch(() => undefined);
     },

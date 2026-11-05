@@ -1,6 +1,6 @@
 // Логика подсчёта: прошёл / притормозил / посмотрел.
 // Порт python/mantis/analytics.py и iOS Analytics.swift один в один.
-// Не зависит от нейросети и трекера — на вход идут уже отслеженные люди (track id + рамка + точки).
+// Не зависит от нейросети и трекера – на вход идут уже отслеженные люди (track id + рамка + точки).
 
 import type { AnalyticsConfig } from "./config";
 import { type Box, type Pt, median, pointInPolygon, polygonArea, segmentsIntersect, sideOfLine } from "./geometry";
@@ -111,18 +111,18 @@ export function emptyCounters(): Counters {
 }
 
 export class Analytics {
-  /** Линия подсчёта в пикселях; null — линия выключена, «прошёл» не считается. */
+  /** Линия подсчёта в пикселях; null – линия выключена, «прошёл» не считается. */
   readonly line: { a: Pt; b: Pt } | null;
   readonly tracks = new Map<number, TrackState>();
   readonly finished: TrackSummary[] = [];
   readonly counters: Counters = emptyCounters();
   lastT = 0;
-  /** Фокусное расстояние в пикселях (для скорости по глубине); 0 — не учитывать движение к камере. */
+  /** Фокусное расстояние в пикселях (для скорости по глубине); 0 – не учитывать движение к камере. */
   readonly focal: number;
-  /** Зона детекции — весь кадр (тогда правило «долго в зоне» не применяется). */
+  /** Зона детекции – весь кадр (тогда правило «долго в зоне» не применяется). */
   readonly zoneIsFull: boolean;
 
-  /** line и zone — уже в пикселях кадра. */
+  /** line и zone – уже в пикселях кадра. */
   constructor(
     readonly cfg: AnalyticsConfig,
     line: Pt[],
@@ -154,7 +154,7 @@ export class Analytics {
     const lateral = dist / h / (p1.t - p0.t);
     if (this.focal <= 0) return lateral;
     // Движение к камере/от камеры: человек почти не сдвигается, но растёт/уменьшается.
-    // Скорость по глубине в «ростах в секунду» = (f/h) * |d ln h / dt|, наклон — по МНК за окно.
+    // Скорость по глубине в «ростах в секунду» = (f/h) * |d ln h / dt|, наклон – по МНК за окно.
     const dwin = this.cfg.slowdown.depthWindowSeconds;
     const dp = tr.history.filter((p) => tNow - p.t <= dwin);
     let depth = 0;
@@ -175,7 +175,7 @@ export class Analytics {
     return Math.pow(lateral * lateral + depth * depth, 0.5);
   }
 
-  /** Обработать один кадр. t — время кадра в секундах. Возвращает новые события. */
+  /** Обработать один кадр. t – время кадра в секундах. Возвращает новые события. */
   update(t: number, people: TrackedPerson[]): AnalyticsEvent[] {
     this.lastT = t;
     const events: AnalyticsEvent[] = [];

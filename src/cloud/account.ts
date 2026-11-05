@@ -99,21 +99,21 @@ export class Account {
     if (toCloud && uid) saveProfile(uid, p).catch((e) => this.set({ error: friendlyError(e) }));
   }
 
-  /** Отправить изменённые часы. Если не получилось — они останутся в очереди. */
+  /** Отправить изменённые часы. Если не получилось – они останутся в очереди. */
   async upload(): Promise<void> {
     const uid = this.uid;
     if (!uid || this.uploading || this.hours.pending === 0) return;
     this.uploading = true;
     const batch = this.hours.takeDirty();
     try {
-      // Без интернета Firestore держит запись в своей очереди (и на диске) и отправит её сам —
+      // Без интернета Firestore держит запись в своей очереди (и на диске) и отправит её сам –
       // поэтому долго не ждём, а просто сообщаем, что отправка отложена.
       const res = await Promise.race([
         saveHours(uid, batch).then(() => "sent" as const),
         new Promise<"queued">((r) => setTimeout(() => r("queued"), 20_000)),
       ]);
       if (res === "sent") this.set({ lastSync: new Date(), error: null });
-      else this.set({ error: "Нет связи с облаком — данные отправятся, когда появится интернет" });
+      else this.set({ error: "Нет связи с облаком – данные отправятся, когда появится интернет" });
     } catch (e) {
       this.hours.markDirty(Object.keys(batch));
       this.set({ error: `Не отправилось в облако: ${friendlyError(e)}` });

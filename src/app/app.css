@@ -55,7 +55,7 @@ p { margin: 0; }
 /* ---------------------------------------------------------------- каркас */
 .app { min-height: 100vh; display: flex; flex-wrap: wrap; }
 .side {
-  flex: 1 1 256px; max-width: 256px; background: #FFFFFF; border-right: 1px solid var(--line); padding: 20px 14px;
+  flex: 1 1 272px; max-width: 272px; background: #FFFFFF; padding: 20px 14px;
   display: flex; flex-direction: column; gap: 20px; position: sticky; top: 0; height: 100vh; overflow: auto;
 }
 .side-top { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
@@ -86,11 +86,12 @@ p { margin: 0; }
 .led.err { background: var(--danger); }
 .led.live { background: var(--danger); }
 
-.main { flex: 999 1 560px; min-width: 0; padding: 24px 32px 48px; display: flex; flex-direction: column; gap: 20px; }
+.main { flex: 999 1 560px; min-width: 0; border-left: 1px solid var(--line); min-height: 100vh; padding: 24px 32px 48px; display: flex; flex-direction: column; gap: 20px; }
 .main.wide { padding: 0; gap: 0; }
 
 @media (max-width: 820px) {
-  .side { flex-basis: 100%; max-width: none; height: auto; position: static; border-right: 0; border-bottom: 1px solid var(--line); padding: 12px 16px; gap: 12px; }
+  .main { border-left: 0; min-height: 0; }
+  .side { flex-basis: 100%; max-width: none; height: auto; position: static; border-bottom: 1px solid var(--line); padding: 12px 16px; gap: 12px; }
   .side > :not(.side-top) { display: none !important; }
   .side.open > :not(.side-top) { display: flex !important; }
   .burger { display: flex; }

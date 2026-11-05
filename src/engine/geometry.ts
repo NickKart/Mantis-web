@@ -1,5 +1,5 @@
 // Геометрические примитивы: линия подсчёта и зона витрины.
-// Порт python/mantis/geometry.py и iOS Geometry.swift — формулы и порядок операций совпадают.
+// Порт python/mantis/geometry.py и iOS Geometry.swift – формулы и порядок операций совпадают.
 
 export interface Pt {
   x: number;

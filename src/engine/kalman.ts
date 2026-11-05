@@ -56,7 +56,7 @@ export class Matrix {
     return m;
   }
 
-  /** Обратная матрица методом Гаусса — Жордана (для 4×4 ковариации проекции). */
+  /** Обратная матрица методом Гаусса – Жордана (для 4×4 ковариации проекции). */
   inverse(): Matrix {
     const n = this.rows;
     const m = new Matrix(n, n, this.a);

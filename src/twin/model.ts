@@ -1,6 +1,6 @@
 // Живой цифровой двойник: раз в 0,2 с берёт людей со всех привязанных камер пилота, переводит на план,
 // сливает одного человека с нескольких камер в одну точку, копит тепловую карту и заходы в зоны за день.
-// Демо-режим — синтетические прохожие (в статистику дня не идут). Порт класса TwinModel (macOS).
+// Демо-режим – синтетические прохожие (в статистику дня не идут). Порт класса TwinModel (macOS).
 
 import { type Pt, pointInPolygon } from "../engine/geometry";
 import type { OverlayBox, PersonState } from "../engine/session";
@@ -20,7 +20,7 @@ export interface TwinSource {
   last: { boxes: OverlayBox[]; width: number; height: number; at: number } | null;
 }
 
-/** Где хранится план, итоги дня и подложка. У раздела «Демо» — свои, чтобы не трогать план мониторинга. */
+/** Где хранится план, итоги дня и подложка. У раздела «Демо» – свои, чтобы не трогать план мониторинга. */
 export interface TwinStorage {
   plan: string;
   stats: string;
@@ -63,7 +63,7 @@ const pick = <T>(a: T[]): T | undefined => a[Math.floor(Math.random() * a.length
 
 export class TwinModel {
   plan: TwinPlan;
-  /** Подложка плана (Blob — для записей, картинка — для рисования). */
+  /** Подложка плана (Blob – для записей, картинка – для рисования). */
   backgroundBlob: Blob | null = null;
   background: ImageBitmap | null = null;
   people: TwinPerson[] = [];
@@ -138,7 +138,7 @@ export class TwinModel {
       await putBlob(this.keys.bg, background);
     }
     if (resized) {
-      // клетки тепла поменялись — тепловая карта начинается заново, заходы в зоны сохраняются
+      // клетки тепла поменялись – тепловая карта начинается заново, заходы в зоны сохраняются
       const s = newDayStats(this.stats.day, this.plan);
       s.visits = this.stats.visits;
       s.dwell = this.stats.dwell;
@@ -189,7 +189,7 @@ export class TwinModel {
   private rebuildProjectors(): void {
     this.projectors.clear();
     for (const [id, c] of Object.entries(this.plan.calibrations)) {
-      if (floorPointsUntouched(c)) continue; // точки по полу не расставлены — людей на план не выводим
+      if (floorPointsUntouched(c)) continue; // точки по полу не расставлены – людей на план не выводим
       const p = CameraProjector.create(c, this.plan);
       if (p) this.projectors.set(id, p);
     }
@@ -288,7 +288,7 @@ export class TwinModel {
     }
     for (const [k, t] of this.tracks) if (now - t.lastSeen >= 1500) this.tracks.delete(k);
 
-    // слияние: один человек, видимый несколькими камерами, — одна точка
+    // слияние: один человек, видимый несколькими камерами, – одна точка
     const active = [...this.tracks].filter(([, t]) => now - t.lastSeen < 700).sort((a, b) => (a[0] < b[0] ? -1 : 1));
     const clusters: string[][] = [];
     const centers: Pt[] = [];
@@ -486,7 +486,7 @@ export class TwinModel {
     return goals;
   }
 
-  /** Путь a→b в обход стен: в магазин и из него — через дверь; по улице и внутри — вокруг здания,
+  /** Путь a→b в обход стен: в магазин и из него – через дверь; по улице и внутри – вокруг здания,
    *  штендеров, стеллажей и витрин (кратчайший путь через их углы). */
   private route(a: Pt, b: Pt, depth = 0): Pt[] {
     const plan = this.plan;
@@ -570,7 +570,7 @@ export class TwinModel {
     return planContains(this.plan, q) && !insideShop(this.plan, q) && !insideObstacle(this.plan, q) ? q : null;
   }
 
-  /** Остановиться у стеллажа или витрины: перед лицевой стороной (у стеллажа — с любой стороны). */
+  /** Остановиться у стеллажа или витрины: перед лицевой стороной (у стеллажа – с любой стороны). */
   private fixtureSpot(inside: boolean): Pt | null {
     const plan = this.plan, shop = hasShop(plan);
     const list = plan.fixtures.filter((f) => !shop || insideShop(plan, f.pos) === inside);

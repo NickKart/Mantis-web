@@ -30,7 +30,7 @@ export function makeLetterbox(w: number, h: number, s: number): Letterbox {
 
 export const NUM_KEYPOINTS = 17;
 
-/** values — выход сети подряд (канал-major): values[c * count + i]. */
+/** values – выход сети подряд (канал-major): values[c * count + i]. */
 export function decodePose(
   values: Float32Array,
   channels: number,

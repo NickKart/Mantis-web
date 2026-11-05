@@ -1,21 +1,21 @@
-// Живой цифровой двойник в Firebase — как TwinPublisher.swift + SiteCloud.swift в iOS-приложении.
+// Живой цифровой двойник в Firebase – как TwinPublisher.swift + SiteCloud.swift в iOS-приложении.
 // Личный кабинет (cabinet.html) подписывается на эти данные и показывает точку в реальном времени.
 //
 // Realtime Database (только владелец, правило auth.uid == $uid), раз в секунду перезаписывается:
 //   live/{uid}/{siteId}
 //     meta:    { device, deviceName, platform: "web", app, status: "counting" | "idle" | "offline", point, planAt, ts }
-//     today:   { people, slowed, looked, entered, turned }           — все камеры за сегодня
+//     today:   { people, slowed, looked, entered, turned }           – все камеры за сегодня
 //     cameras: { camId: { name, kind, on, live, onPlan, fps, inFrame, w, h, today: {…} } }
-//     people:  { camId: { "n12": [u, v, x, z, s, look] } }            — u, v — ноги в кадре (0…1); x, z — на полу от камеры, м
-//     plan:    { id: [x, y, s, камер] }                               — люди на плане точки, м (один человек с нескольких камер — одна точка)
-//   presence/{uid}/{siteId}/{deviceId}: { name, platform, since }      — само удаляется при обрыве связи
+//     people:  { camId: { "n12": [u, v, x, z, s, look] } }            – u, v – ноги в кадре (0…1); x, z – на полу от камеры, м
+//     plan:    { id: [x, y, s, камер] }                               – люди на плане точки, м (один человек с нескольких камер – одна точка)
+//   presence/{uid}/{siteId}/{deviceId}: { name, platform, since }      – само удаляется при обрыве связи
 //
 // Firestore (как у кабинета):
-//   users/{uid}/sites/{siteId}                 — { name, planJSON, updatedAt }  план точки: в вебе он свой, синхронизируется в обе стороны
-//   users/{uid}/sites/{siteId}/cameras/{camId} — реестр камер (пишется при изменениях)
-//   users/{uid}/sites/{siteId}/assets/background — подложка плана (JPEG base64)
+//   users/{uid}/sites/{siteId}                 – { name, planJSON, updatedAt }  план точки: в вебе он свой, синхронизируется в обе стороны
+//   users/{uid}/sites/{siteId}/cameras/{camId} – реестр камер (пишется при изменениях)
+//   users/{uid}/sites/{siteId}/assets/background – подложка плана (JPEG base64)
 //
-// Видео и лица никуда не отправляются — только координаты и счётчики.
+// Видео и лица никуда не отправляются – только координаты и счётчики.
 
 import { type Database, type Unsubscribe as DbUnsubscribe, onDisconnect, onValue, ref, serverTimestamp as rtdbTime, set, update } from "firebase/database";
 import { twinDatabase } from "./rtdb";
@@ -41,7 +41,7 @@ export type TwinCloudState =
   | { kind: "off" }
   | { kind: "signedOut" }
   | { kind: "sending"; at: Date; people: number; demo: boolean }
-  /** На точке сейчас передаёт другое устройство (например, iPhone с демо) — этот компьютер его не перебивает. */
+  /** На точке сейчас передаёт другое устройство (например, iPhone с демо) – этот компьютер его не перебивает. */
   | { kind: "standby"; other: string }
   | { kind: "error"; text: string };
 
@@ -67,7 +67,7 @@ const r2 = (v: number) => Math.round(v * 100) / 100;
 const r3 = (v: number) => Math.round(v * 1000) / 1000;
 const statDict = (h: HourStat) => ({ people: h.people, slowed: h.slowed, looked: h.looked, entered: h.entered, turned: h.returned ?? 0 });
 
-/** Демо (синтетические прохожие) — уходит в облако вместо живых данных, как с iPhone. */
+/** Демо (синтетические прохожие) – уходит в облако вместо живых данных, как с iPhone. */
 export interface DemoSnapshot {
   plan: TwinPlan;
   people: TwinPerson[];
@@ -95,7 +95,7 @@ export class TwinPublisher {
   private other: { device: string; name: string; active: boolean; online: boolean; at: number } | null = null;
   private metaUnsub: DbUnsubscribe | null = null;
   private wroteLast = false;
-  /** План демо, уже лежащий в облаке (JSON) — шлём только при изменении, как iPhone. */
+  /** План демо, уже лежащий в облаке (JSON) – шлём только при изменении, как iPhone. */
   private sentDemoPlan: string | null = null;
 
   constructor(private readonly o: {
@@ -103,9 +103,9 @@ export class TwinPublisher {
     pilot: MultiPilot;
     twin: TwinModel;
     deviceName: () => string;
-    /** План пришёл из кабинета — перерисовать экраны. */
+    /** План пришёл из кабинета – перерисовать экраны. */
     onPlanFromCloud: () => void;
-    /** Демо на этом компьютере (раздел «Демо»): идёт — в облако уходит демо, как с iPhone. */
+    /** Демо на этом компьютере (раздел «Демо»): идёт – в облако уходит демо, как с iPhone. */
     demo?: () => DemoSnapshot | null;
   }) {
     this.knownJSON = JSON.stringify(o.twin.plan);
@@ -122,7 +122,7 @@ export class TwinPublisher {
     void this.tick();
   }
 
-  /** Код точки (по умолчанию main) — как в iOS: на каждом магазине свой. */
+  /** Код точки (по умолчанию main) – как в iOS: на каждом магазине свой. */
   get siteId(): string {
     const s = (get(KEYS.site) ?? "").trim();
     return s ? safeKey(s) : "main";
@@ -143,13 +143,13 @@ export class TwinPublisher {
     for (const fn of this.listeners) fn(s);
   }
 
-  /** Выключили передачу, вышли или закрыли страницу — точка в кабинете «не на связи». */
+  /** Выключили передачу, вышли или закрыли страницу – точка в кабинете «не на связи». */
   goOffline(): void {
     const k = this.presenceKey;
     if (!k || !this.db) return;
     const [uid, site] = k.split("/");
     void set(ref(this.db, `presence/${uid}/${site}/${desktopDeviceId()}`), null).catch(() => undefined);
-    // «не на связи» ставим, только если состояние точки писали мы, — не гасим iPhone или другой компьютер
+    // «не на связи» ставим, только если состояние точки писали мы, – не гасим iPhone или другой компьютер
     if (this.wroteLast && !this.otherActive()) {
       void update(ref(this.db, `live/${uid}/${site}/meta`), { status: "offline", ts: rtdbTime() }).catch(() => undefined);
     }
@@ -187,7 +187,7 @@ export class TwinPublisher {
       return;
     }
     const demo = this.o.demo?.() ?? null;
-    // здесь ничего не идёт, а точку только что передавало другое устройство (iPhone, другой компьютер) — молчим:
+    // здесь ничего не идёт, а точку только что передавало другое устройство (iPhone, другой компьютер) – молчим:
     // иначе два устройства по очереди перезаписывают точку и в кабинете всё «передёргивается»
     if (!demo && !this.o.pilot.running && this.otherRecent()) {
       this.wroteLast = false;
@@ -195,10 +195,10 @@ export class TwinPublisher {
       this.setState({ kind: "standby", other: this.other!.name });
       return;
     }
-    if (this.writing) return; // прошлая запись ещё не подтверждена — не копим очередь
+    if (this.writing) return; // прошлая запись ещё не подтверждена – не копим очередь
     this.writing = true;
     const { payload, people } = demo ? this.demoPayload(demo) : this.payload();
-    // план демо (несколько КБ) — только когда поменялся; вышли из демо — убираем
+    // план демо (несколько КБ) – только когда поменялся; вышли из демо – убираем
     const demoJSON = demo ? JSON.stringify(demo.plan) : null;
     if (demoJSON !== this.sentDemoPlan) payload.demoPlan = demoJSON;
     try {
@@ -260,7 +260,7 @@ export class TwinPublisher {
     await set(pres, { name: this.o.deviceName(), platform: desktopShell ?? "web", since: rtdbTime() });
     await onDisconnect(ref(db, `live/${uid}/${site}/meta`)).update({ status: "offline", ts: rtdbTime() });
     this.presenceKey = `${uid}/${site}`;
-    // кто сейчас пишет состояние точки: если не мы и он активен — молчим, пока здесь ничего не идёт
+    // кто сейчас пишет состояние точки: если не мы и он активен – молчим, пока здесь ничего не идёт
     this.metaUnsub?.();
     this.metaUnsub = onValue(ref(db, `live/${uid}/${site}/meta`), (snap) => {
       const m = snap.val() as { device?: string; deviceName?: string; status?: string } | null;
@@ -318,7 +318,7 @@ export class TwinPublisher {
       },
       today: statDict(pilot.today()),
     };
-    // update() заменяет части целиком: пустые — null, чтобы не остались прежние (например, от демо)
+    // update() заменяет части целиком: пустые – null, чтобы не остались прежние (например, от демо)
     payload.cameras = Object.keys(cameras).length ? cameras : null;
     payload.people = Object.keys(people).length ? people : null;
     // люди на плане точки: двойник уже слил одного человека с нескольких камер в одну точку
@@ -355,7 +355,7 @@ export class TwinPublisher {
     }, () => undefined);
   }
 
-  /** План: правили здесь — уходит в облако; правили в кабинете (позже, чем здесь) — приходит сюда. */
+  /** План: правили здесь – уходит в облако; правили в кабинете (позже, чем здесь) – приходит сюда. */
   private syncPlan(uid: string, site: string): void {
     const cloud = this.cloud;
     if (!cloud || this.pushing) return; // ждём первый ответ облака
@@ -369,7 +369,7 @@ export class TwinPublisher {
       localAt = Date.now();
       put(KEYS.planAt, String(localAt));
     }
-    // первый раз: размеченный здесь план главнее облачного — он уходит в Firebase
+    // первый раз: размеченный здесь план главнее облачного – он уходит в Firebase
     const marked = twin.plan.shop.length || twin.plan.zones.length || twin.plan.stands.length || (twin.plan.fixtures ?? []).length
       || Object.keys(twin.plan.calibrations).length;
     if (!localAt && marked) {
@@ -377,7 +377,7 @@ export class TwinPublisher {
       put(KEYS.planAt, String(localAt));
     }
     if (cloud.json && cloud.at > localAt && cloud.json !== json) {
-      // из кабинета: подложка у плана остаётся своя. Первый раз — свой план сохраняем на всякий случай
+      // из кабинета: подложка у плана остаётся своя. Первый раз – свой план сохраняем на всякий случай
       if (marked) put(KEYS.backup, json);
       let plan: TwinPlan;
       try {
@@ -400,19 +400,19 @@ export class TwinPublisher {
       const at = Math.max(localAt, Date.now());
       this.pushing = true;
       this.pushedJSON = sig;
-      // planJSON — для кабинета и iPhone (TwinPlan целиком); layout — та же разметка полями: видно в консоли Firebase
+      // planJSON – для кабинета и iPhone (TwinPlan целиком); layout – та же разметка полями: видно в консоли Firebase
       void setDoc(doc(firestore(), "users", uid, "sites", site),
         { planJSON: json, layout: layoutOf(twin.plan, cams), updatedAt: at }, { merge: true })
         .then(() => {
           put(KEYS.planAt, String(at));
           this.pushedCams = camSig;
-          // снимок облака мог прийти раньше подтверждения — не затираем более новый
+          // снимок облака мог прийти раньше подтверждения – не затираем более новый
           if (!this.cloud || this.cloud.at <= at) this.cloud = { json, at };
         })
         .catch(() => (this.pushedJSON = null))
         .finally(() => (this.pushing = false));
     }
-    // подложка плана — тоже в кабинет
+    // подложка плана – тоже в кабинет
     const bg = twin.backgroundBlob;
     if (bg !== this.pushedBg) {
       this.pushedBg = bg;
@@ -460,7 +460,7 @@ interface CamInfo {
 
 const pt = (p: { x: number; y: number }) => ({ x: r2(p.x), y: r2(p.y) });
 
-/** Разметка точки полями (Firestore не хранит массивы в массивах — точки как {x, y}). */
+/** Разметка точки полями (Firestore не хранит массивы в массивах – точки как {x, y}). */
 export function layoutOf(plan: TwinPlan, cams: CamInfo[]): Record<string, unknown> {
   const shop = hasShop(plan);
   const span = (k: "showcase" | "door") => (s: TwinPlan["showcases"][number], i: number) => {
@@ -494,10 +494,10 @@ export function layoutOf(plan: TwinPlan, cams: CamInfo[]): Record<string, unknow
   };
 }
 
-/** Подложка: до 1600 px, JPEG в Firestore (документ — до 1 МБ), как в кабинете. */
+/** Подложка: до 1600 px, JPEG в Firestore (документ – до 1 МБ), как в кабинете. */
 async function pushBackground(uid: string, site: string, blob: Blob | null): Promise<void> {
   const r = doc(firestore(), "users", uid, "sites", site, "assets", "background");
-  if (!blob) return; // убрать подложку в кабинете — только из кабинета
+  if (!blob) return; // убрать подложку в кабинете – только из кабинета
   const bmp = await createImageBitmap(blob);
   const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
   const c = document.createElement("canvas");

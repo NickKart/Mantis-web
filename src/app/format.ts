@@ -6,7 +6,7 @@ export const num = (v: number): string => Math.round(v).toLocaleString("ru-RU").
 
 /** Доля в процентах: до 10% – с одним знаком после запятой. */
 export function pct(part: number, whole: number, digits?: number): string {
-  if (!(whole > 0)) return "—";
+  if (!(whole > 0)) return "–";
   const v = (part / whole) * 100;
   const d = digits ?? (v < 10 && v > 0 ? 1 : 0);
   return `${v.toFixed(d).replace(".", ",")}%`;

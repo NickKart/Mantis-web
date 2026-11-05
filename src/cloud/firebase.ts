@@ -1,9 +1,9 @@
 // Firebase: вход по почте и паролю, профиль магазина, почасовая статистика, пульс устройства.
 // Та же структура Firestore, что у iOS-приложения (mantis/Services/Cloud.swift):
-//   users/{uid}                 — профиль магазина
-//   users/{uid}/hours/{key}     — счётчики за час
-//   users/{uid}/devices/{id}    — точки с пилотом (браузер, Mac, Windows): последний сигнал и состояние
-//   users/{uid}/camera_hours/{камера}_{день} — счётчики по каждой камере (пилот на нескольких камерах: Mac, Windows)
+//   users/{uid}                 – профиль магазина
+//   users/{uid}/hours/{key}     – счётчики за час
+//   users/{uid}/devices/{id}    – точки с пилотом (браузер, Mac, Windows): последний сигнал и состояние
+//   users/{uid}/camera_hours/{камера}_{день} – счётчики по каждой камере (пилот на нескольких камерах: Mac, Windows)
 
 import { type FirebaseApp, initializeApp } from "firebase/app";
 import {
@@ -26,7 +26,7 @@ const firebaseConfig = {
   appId: "1:611953242655:web:02f77b809f83c5d7209b2a",
 };
 
-/** Профиль магазина — как BusinessProfile в iOS. */
+/** Профиль магазина – как BusinessProfile в iOS. */
 export interface BusinessProfile {
   name: string;
   company: string;
@@ -106,8 +106,8 @@ export function friendlyError(e: unknown): string {
     "auth/wrong-password": "Неверная почта или пароль",
     "auth/user-not-found": "Неверная почта или пароль",
     "auth/invalid-email": "Неверный адрес почты",
-    "auth/email-already-in-use": "Эта почта уже зарегистрирована — войдите",
-    "auth/weak-password": "Пароль слишком простой — минимум 6 символов",
+    "auth/email-already-in-use": "Эта почта уже зарегистрирована – войдите",
+    "auth/weak-password": "Пароль слишком простой – минимум 6 символов",
     "auth/too-many-requests": "Слишком много попыток, попробуйте позже",
     "auth/network-request-failed": "Нет связи с интернетом",
     "auth/unauthorized-domain": "Этот адрес сайта не разрешён в Firebase (Authentication → Settings → Authorized domains)",
@@ -182,7 +182,7 @@ export interface RemoteDevice extends DeviceStatus {
   id: string;
   lastSeen: Date | null;
   platform: string;
-  /** Сколько камер у точки (0 — не сообщает, браузер). */
+  /** Сколько камер у точки (0 – не сообщает, браузер). */
   cameraCount: number;
 }
 
@@ -250,7 +250,7 @@ export async function loadDevices(uid: string): Promise<RemoteDevice[]> {
 }
 
 // ---------------------------------------------------------------- настройки веб-версии
-// users/{uid}/web/settings — то, чего нет в iOS: оформления витрины (именованные периоды), чеки из кассы.
+// users/{uid}/web/settings – то, чего нет в iOS: оформления витрины (именованные периоды), чеки из кассы.
 
 export async function loadWebSettings(uid: string): Promise<Record<string, unknown> | null> {
   const snap = await getDoc(doc(init().db, "users", uid, "web", "settings"));

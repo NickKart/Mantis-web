@@ -28,7 +28,7 @@ export class Detector {
    * поток с нейросетью пересоздаётся и пробуется следующий.
    */
   static async create(onStatus?: (s: string) => void): Promise<Detector> {
-    const forceCpu = new URLSearchParams(location.search).has("cpu"); // ?cpu в адресе — сразу на процессоре
+    const forceCpu = new URLSearchParams(location.search).has("cpu"); // ?cpu в адресе – сразу на процессоре
     const attempts: { preferGpu: boolean; threads: number }[] = [
       ...(forceCpu ? [] : [{ preferGpu: true, threads: 0 }]),
       { preferGpu: false, threads: 0 },
@@ -51,7 +51,7 @@ export class Detector {
 
   private init(preferGpu: boolean, threads: number, onStatus?: (s: string) => void): Promise<void> {
     const base = new URL(import.meta.env.BASE_URL, location.href);
-    // Время на каждый этап: скачивание модели — дольше, создание сессии — меньше
+    // Время на каждый этап: скачивание модели – дольше, создание сессии – меньше
     const limits = { model: 120_000, gpu: 30_000, cpu: 40_000 } as const;
     const labels = { model: "Скачиваю нейросеть…", gpu: "Запускаю на видеокарте…", cpu: "Запускаю на процессоре…" } as const;
     return new Promise<void>((resolve, reject) => {
@@ -97,9 +97,9 @@ export class Detector {
   }
 
   /**
-   * Снять кадр и отправить в нейросеть. Возвращается сразу после снятия кадра —
+   * Снять кадр и отправить в нейросеть. Возвращается сразу после снятия кадра –
    * источник (видео) можно двигать дальше, пока считается результат.
-   * source — кадр видео/камеры; width/height — его размер в пикселях (система координат результата).
+   * source – кадр видео/камеры; width/height – его размер в пикселях (система координат результата).
    */
   async submit(source: CanvasImageSource, width: number, height: number, conf = this.conf): Promise<{ result: Promise<DetectResult> }> {
     const lb = makeLetterbox(width, height, this.inputSize);
@@ -117,7 +117,7 @@ export class Detector {
     return { result };
   }
 
-  /** conf — порог уверенности для этого кадра (по умолчанию общий; пилот на нескольких камерах берёт свой). */
+  /** conf – порог уверенности для этого кадра (по умолчанию общий; пилот на нескольких камерах берёт свой). */
   async detect(source: CanvasImageSource, width: number, height: number, conf = this.conf): Promise<DetectResult> {
     return (await this.submit(source, width, height, conf)).result;
   }

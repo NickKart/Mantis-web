@@ -1,18 +1,18 @@
-// Чувствительность камеры: что считать человеком, а что — ложным срабатыванием.
+// Чувствительность камеры: что считать человеком, а что – ложным срабатыванием.
 // Порт DetectionFilter.swift и отбора в LiveCameraEngine.swift (macOS): уровень, минимальный рост,
 // зоны исключения, неподвижные фигуры, строгость «посмотрел / притормозил», режим проверки с причинами.
-// Применяется между нейросетью и трекером (и после трекера — для неподвижных), у каждой камеры пилота — своя.
+// Применяется между нейросетью и трекером (и после трекера – для неподвижных), у каждой камеры пилота – своя.
 
 import type { RawDetection } from "../engine/bytetrack";
 import type { AnalyticsConfig } from "../engine/config";
 import { type Box, type Pt, iou, pointInPolygon, toPixels } from "../engine/geometry";
 
 export interface DetectionFilter {
-  /** 0 — максимальная чувствительность … 4 — минимальная (меньше ложных срабатываний). */
+  /** 0 – максимальная чувствительность … 4 – минимальная (меньше ложных срабатываний). */
   level: number;
-  /** Минимальный рост фигуры в % от высоты кадра; 0 — не ограничивать. */
+  /** Минимальный рост фигуры в % от высоты кадра; 0 – не ограничивать. */
   minHeightPercent: number;
-  /** Строгость «посмотрел / притормозил»: 0 — мягкая, 1 — обычная, 2 — строгая. */
+  /** Строгость «посмотрел / притормозил»: 0 – мягкая, 1 – обычная, 2 – строгая. */
   behavior: number;
   /** Зоны исключения (в долях кадра): всё, чей центр внутри, не считается. */
   exclusions?: Pt[][];
@@ -38,7 +38,7 @@ export const normalizeFilter = (f: Partial<DetectionFilter> | null | undefined):
 export const LEVEL_TITLES = ["Максимальная", "Стандартная", "Сниженная", "Низкая", "Минимальная"];
 export const LEVEL_HINTS = [
   "Ловит всех, даже плохо видимых. Возможны ложные срабатывания.",
-  "Как по умолчанию — подходит для большинства камер.",
+  "Как по умолчанию – подходит для большинства камер.",
   "Нужна уверенность нейросети выше, фигура должна продержаться дольше.",
   "Для сложных сцен: отражения, плакаты, мелькания у края кадра.",
   "Только чётко видимые люди, которые пробыли в кадре 2 секунды и дольше.",
@@ -46,7 +46,7 @@ export const LEVEL_HINTS = [
 export const BEHAVIOR_TITLES = ["Мягкая", "Обычная", "Строгая"];
 export const BEHAVIOR_HINTS = [
   "Засчитывает короткий взгляд (0,4 с) и лёгкое замедление.",
-  "Взгляд от 0,6 с, замедление от 1 с — как по умолчанию.",
+  "Взгляд от 0,6 с, замедление от 1 с – как по умолчанию.",
   "Только явный взгляд (от 1 с, голова прямо к витрине) и заметная остановка.",
 ];
 
@@ -97,7 +97,7 @@ export function filterDetections(dets: RawDetection[], f: DetectionFilter, frame
   return new FilterRuntime().apply(dets, f, 0, frameWidth, frameHeight).kept;
 }
 
-/** Отброшенная детекция — для режима проверки. */
+/** Отброшенная детекция – для режима проверки. */
 export interface RejectedBox {
   box: Box;
   reason: string;
@@ -128,7 +128,7 @@ export class FilterRuntime {
     return this.spots.map((s) => s.box);
   }
 
-  /** Включили/выключили неподвижные или поменяли время — начать заново. */
+  /** Включили/выключили неподвижные или поменяли время – начать заново. */
   private sync(f: DetectionFilter): void {
     const k = `${!!f.ignoreStatic}|${f.staticMinutes ?? 3}`;
     if (k !== this.key) {
@@ -150,7 +150,7 @@ export class FilterRuntime {
     const minConf = minConfidence(f);
     const minH = f.minHeightPercent > 0 ? (f.minHeightPercent / 100) * H : 0;
     const zones = W > 0 ? (f.exclusions ?? []).filter((z) => z.length >= 3).map((z) => toPixels(z, W, H)) : [];
-    this.spots = this.spots.filter((s) => t - s.lastT <= 600); // место пустует 10 минут — снова считаем
+    this.spots = this.spots.filter((s) => t - s.lastT <= 600); // место пустует 10 минут – снова считаем
     for (const d of raw) {
       const b = d.box;
       const center = { x: (b.x1 + b.x2) / 2, y: (b.y1 + b.y2) / 2 };
@@ -170,7 +170,7 @@ export class FilterRuntime {
 
   /**
    * Неподвижные фигуры: трек, который стоит на месте дольше staticMinutes, больше не учитывается,
-   * а его место запоминается — следующие детекции там отбрасываются.
+   * а его место запоминается – следующие детекции там отбрасываются.
    */
   dropStatic<P extends TrackedLike>(people: P[], f: DetectionFilter, t: number): P[] {
     this.sync(f);

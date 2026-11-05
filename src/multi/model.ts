@@ -1,6 +1,6 @@
-// Пилот на нескольких камерах (настольная версия, Windows) — порт PilotModel.swift (macOS).
+// Пилот на нескольких камерах (настольная версия, Windows) – порт PilotModel.swift (macOS).
 // Считает без остановки часами и днями: прирост всех камер раскладывается по часам (HourlyStore →
-// users/{uid}/hours), по каждой камере — в CameraHourlyStore (users/{uid}/camera_hours), раз в минуту пульс
+// users/{uid}/hours), по каждой камере – в CameraHourlyStore (users/{uid}/camera_hours), раз в минуту пульс
 // точки (users/{uid}/devices/{id}, platform "windows", список камер). Компьютер не засыпает, каждая камера
 // сама перезапускается при сбое, после перезапуска приложения подсчёт продолжается.
 
@@ -45,7 +45,7 @@ export class MultiPilot {
   channels: Channel[] = [];
   running = false;
   startedAt: number | null = null;
-  /** Итоги всех камер с запуска; seconds — время наблюдения (общее). */
+  /** Итоги всех камер с запуска; seconds – время наблюдения (общее). */
   totals: HourStat = emptyHour();
   lastBeat: Date | null = null;
   readonly cameraHours: CameraHourlyStore;
@@ -121,7 +121,7 @@ export class MultiPilot {
     }
   }
 
-  /** Добавить новую камеру или изменить существующую. Источник поменялся — камера переподключится. */
+  /** Добавить новую камеру или изменить существующую. Источник поменялся – камера переподключится. */
   async upsert(config: ChannelConfig): Promise<void> {
     const ch = this.channels.find((c) => c.id === config.id);
     if (ch) {
@@ -138,7 +138,7 @@ export class MultiPilot {
           void ch.startPreview();
         }
       } else if (this.running) {
-        // новые пороги — новый кусок подсчёта; одно переименование или псевдоним подсчёт не трогают
+        // новые пороги – новый кусок подсчёта; одно переименование или псевдоним подсчёт не трогают
         const key = (c: ChannelConfig) => JSON.stringify([c.markup, c.direction, c.filter]);
         if (key(old) !== key(config)) ch.restart();
       }
@@ -236,7 +236,7 @@ export class MultiPilot {
     this.h.onChange();
   }
 
-  /** Закрытие окна или перезагрузка: досчитать и сохранить; флаг «пилот идёт» остаётся — продолжим при запуске. */
+  /** Закрытие окна или перезагрузка: досчитать и сохранить; флаг «пилот идёт» остаётся – продолжим при запуске. */
   prepareForUnload(): void {
     if (!this.running) return;
     this.collect(0);
@@ -263,13 +263,13 @@ export class MultiPilot {
     this.h.onChange();
   }
 
-  /** Забрать прирост камер: в общие часы и по камерам. sec — сколько секунд прошло. */
+  /** Забрать прирост камер: в общие часы и по камерам. sec – сколько секунд прошло. */
   private collect(sec: number): void {
     let delta = emptyHour();
     for (const c of this.channels) {
       const d = c.takeDelta() ?? emptyHour();
       delta = addHours(delta, d);
-      // у каждой камеры — своё время наблюдения
+      // у каждой камеры – своё время наблюдения
       const cd = { ...d, seconds: c.isLive ? sec : 0 };
       this.cameraHours.add(c.id, c.title, cd);
     }

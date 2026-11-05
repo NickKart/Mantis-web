@@ -1,4 +1,4 @@
-// Статистика за период и пересчёт в деньги — порт iOS StatsView и Business.swift (ShowcaseScore, MoneyEstimate).
+// Статистика за период и пересчёт в деньги – порт iOS StatsView и Business.swift (ShowcaseScore, MoneyEstimate).
 
 import type { BusinessProfile } from "../cloud/firebase";
 import { type HourStat, addHours, emptyHour, keyDate } from "./hours";
@@ -20,7 +20,7 @@ export interface Row {
   stat: HourStat;
 }
 
-/** Часы за последние days дней (0 — всё время), по возрастанию. */
+/** Часы за последние days дней (0 – всё время), по возрастанию. */
 export function rowsFor(hours: Record<string, HourStat>, days: number, now = new Date()): Row[] {
   const from = days > 0 ? new Date(now.getTime() - days * 86400_000) : new Date(0);
   const out: Row[] = [];
@@ -51,7 +51,7 @@ export function hourBars(rows: Row[], m: Metric): Bar[] {
   return sum.map((s, h) => ({ label: String(h), value: n[h] ? s / n[h] : 0 }));
 }
 
-/** Среднее за день по дням недели (Пн — первый). */
+/** Среднее за день по дням недели (Пн – первый). */
 export function weekdayBars(rows: Row[], m: Metric): Bar[] {
   const sum = new Array(7).fill(0);
   const days = Array.from({ length: 7 }, () => new Set<number>());

@@ -20,17 +20,17 @@ export const C = {
   entrance: "#59e680",
 };
 
-/** Цвета людей на плане — как в iOS (PlanPainter.personColor, тёмная тема): идёт — Theme.accent, прошёл — белый,
- *  притормозил — системный зелёный, смотрит — системный жёлтый. Одинаково на телефоне, в вебе и в кабинете. */
+/** Цвета людей на плане – как в iOS (PlanPainter.personColor, тёмная тема): идёт – Theme.accent, прошёл – белый,
+ *  притормозил – системный зелёный, смотрит – системный жёлтый. Одинаково на телефоне, в вебе и в кабинете. */
 export const PERSON_COLORS: Record<PersonState, string> = { tracked: "#8fa6ff", passed: "#ffffff", slowed: "#30d158", looked: "#ffd60a" };
 export const personColor = (s: PersonState) => PERSON_COLORS[s] ?? PERSON_COLORS.tracked;
-/** Цвета отметок «вернулся» и «зашёл» — поверх цвета состояния. */
+/** Цвета отметок «вернулся» и «зашёл» – поверх цвета состояния. */
 export const FLAG_COLORS = { returned: "#ff9f40", entered: "#7cf2c8" };
 /** Цвет человека на плане с учётом отметок. */
 export const personFill = (p: Pick<TwinPerson, "state" | "flags">): string =>
   (p.flags ?? 0) & FLAG_ENTERED ? FLAG_COLORS.entered : (p.flags ?? 0) & FLAG_RETURNED ? FLAG_COLORS.returned : personColor(p.state);
 
-/** Оттенки плана, которых нет в C. По умолчанию — тёмная тема (кабинет); светлая — новый интерфейс. */
+/** Оттенки плана, которых нет в C. По умолчанию – тёмная тема (кабинет); светлая – новый интерфейс. */
 export const T = {
   font: '"Onest Variable", system-ui, sans-serif',
   planFill: "rgba(10, 18, 48, 0.85)",
@@ -53,7 +53,7 @@ export const T = {
   multiRing: "rgba(255,255,255,0.6)",
 };
 
-/** Светлая тема плана — как в макете нового интерфейса. Вызывается один раз при старте приложения. */
+/** Светлая тема плана – как в макете нового интерфейса. Вызывается один раз при старте приложения. */
 export function applyLightPlanTheme(): void {
   Object.assign(C, {
     bg: "#F4F6FA", panel: "#FFFFFF", moon: "#1F2937", dim: "#5E6A7D", focus: "#4A9BD8",
@@ -324,7 +324,7 @@ export function paintFixtures(ctx: CanvasRenderingContext2D, plan: TwinPlan, f: 
 
 export const fixtureColor = (fx: TwinFixture) => (fx.kind === "rack" ? C.rack : C.showcase);
 
-/** Стеллажи (с полками вдоль) и витрины-прилавки (белая лицевая сторона) — в магазине или на плане. */
+/** Стеллажи (с полками вдоль) и витрины-прилавки (белая лицевая сторона) – в магазине или на плане. */
 export function paintStandalone(ctx: CanvasRenderingContext2D, list: TwinFixture[], f: PlanFrame, selected: string | null = null): void {
   for (const fx of list) {
     const c = fixtureCorners(fx);
@@ -396,7 +396,7 @@ export function paintCamera(ctx: CanvasRenderingContext2D, cam: CameraMark, f: P
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.2;
     ctx.stroke();
-    // дуга дальности — только там, где она внутри плана
+    // дуга дальности – только там, где она внутри плана
     ctx.globalAlpha = 0.7;
     ctx.setLineDash([4, 3]);
     ctx.beginPath();

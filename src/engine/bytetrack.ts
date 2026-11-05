@@ -118,7 +118,7 @@ export interface TrackOutput {
   trackId: number;
   /** Рамка из фильтра Калмана (как отдаёт ultralytics). */
   box: Box;
-  /** Индекс исходной детекции — оттуда берутся ключевые точки. */
+  /** Индекс исходной детекции – оттуда берутся ключевые точки. */
   detIndex: number;
 }
 
@@ -140,7 +140,7 @@ export class ByteTracker {
     return this.nextId;
   }
 
-  /** width/height — размер кадра: итоговые рамки обрезаются по кадру (как Results.update в ultralytics). */
+  /** width/height – размер кадра: итоговые рамки обрезаются по кадру (как Results.update в ultralytics). */
   update(detections: RawDetection[], width: number, height: number): TrackOutput[] {
     this.frameId += 1;
     const frameId = this.frameId, kf = this.kf, cfg = this.cfg;
@@ -159,7 +159,7 @@ export class ByteTracker {
     const unconfirmed = this.tracked.filter((t) => !t.isActivated);
     const trackedConfirmed = this.tracked.filter((t) => t.isActivated);
 
-    // Шаг 2: первое сопоставление — уверенные детекции с активными и потерянными треками
+    // Шаг 2: первое сопоставление – уверенные детекции с активными и потерянными треками
     const pool = joint(trackedConfirmed, this.lost);
     for (const t of pool) {
       if (!t.mean || !t.cov) continue;
@@ -183,7 +183,7 @@ export class ByteTracker {
       }
     }
 
-    // Шаг 3: второе сопоставление — слабые детекции с оставшимися активными треками
+    // Шаг 3: второе сопоставление – слабые детекции с оставшимися активными треками
     const rTracked = r1.unmatchedRows.map((i) => pool[i]).filter((t) => t.state === "tracked");
     const dists2 = iouDistance(rTracked, second);
     const r2 = solveAssignment(dists2, rTracked.length, second.length, 0.5);
@@ -303,7 +303,7 @@ function fuseScore(cost: number[][], dets: STrack[]): number[][] {
   return cost.map((row) => row.map((c, j) => 1 - (1 - c) * dets[j].score));
 }
 
-/** Оптимальное сопоставление с порогом стоимости — как lap.lapjv(extend_cost=True, cost_limit=thresh). */
+/** Оптимальное сопоставление с порогом стоимости – как lap.lapjv(extend_cost=True, cost_limit=thresh). */
 export function solveAssignment(
   cost: number[][],
   n: number,
@@ -345,7 +345,7 @@ function hungarian(a: number[][]): number[] {
   const INF = Number.MAX_VALUE;
   const u = new Float64Array(n + 1);
   const v = new Float64Array(n + 1);
-  const p = new Int32Array(n + 1); // p[j] — строка, назначенная столбцу j (1-based)
+  const p = new Int32Array(n + 1); // p[j] – строка, назначенная столбцу j (1-based)
   const way = new Int32Array(n + 1);
   for (let i = 1; i <= n; i++) {
     p[0] = i;

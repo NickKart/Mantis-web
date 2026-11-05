@@ -74,10 +74,10 @@ export class Session {
   private maxSimultaneous = 0;
   private frames = 0;
   private firstT: number | null = null;
-  /** Отбор людей после трекера (неподвижные фигуры в пилоте); null — все. */
+  /** Отбор людей после трекера (неподвижные фигуры в пилоте); null – все. */
   trackFilter: (<P extends { trackId: number; box: Box }>(people: P[], t: number) => P[]) | null = null;
 
-  /** entrance — линия входа в долях кадра (null — вход не считаем). */
+  /** entrance – линия входа в долях кадра (null – вход не считаем). */
   constructor(
     readonly cfg: AnalyticsConfig,
     readonly width: number,
@@ -118,7 +118,7 @@ export class Session {
         }
       }
 
-      // Вход в магазин — живой счётчик (в итогах пересчитывается по траекториям, как в iOS)
+      // Вход в магазин – живой счётчик (в итогах пересчитывается по траекториям, как в iOS)
       const en = this.entrancePx;
       if (en && prev && !this.enteredIds.has(p.trackId) && segmentsIntersect({ x: prev.x, y: prev.y }, foot, en[0], en[1])) {
         this.enteredIds.add(p.trackId);

@@ -1,15 +1,15 @@
-// Точки: живой цифровой двойник каждой точки с любого устройства — раздел «Точки» в приложении
+// Точки: живой цифровой двойник каждой точки с любого устройства – раздел «Точки» в приложении
 // и отдельная страница личного кабинета (cabinet.html) для руководителя.
 //
 // Откуда данные:
-//   Realtime Database  live/{uid}/{site}        — раз в секунду пишет устройство на точке (iPhone: TwinPublisher.swift)
-//                      presence/{uid}/{site}/…  — устройство на связи (само исчезает при обрыве)
-//   Firestore          users/{uid}/sites/{site} — { name, planJSON, updatedAt }: план точки рисуется здесь, во вкладке «План»
-//                      …/sites/{site}/cameras/{camId} — реестр камер точки (пишет устройство)
-//                      …/sites/{site}/frames/{camId}  — размытый кадр камеры для привязки к плану
-//                      …/sites/{site}/assets/background — подложка плана (JPEG base64)
+//   Realtime Database  live/{uid}/{site}        – раз в секунду пишет устройство на точке (iPhone: TwinPublisher.swift)
+//                      presence/{uid}/{site}/…  – устройство на связи (само исчезает при обрыве)
+//   Firestore          users/{uid}/sites/{site} – { name, planJSON, updatedAt }: план точки рисуется здесь, во вкладке «План»
+//                      …/sites/{site}/cameras/{camId} – реестр камер точки (пишет устройство)
+//                      …/sites/{site}/frames/{camId}  – размытый кадр камеры для привязки к плану
+//                      …/sites/{site}/assets/background – подложка плана (JPEG base64)
 //
-// Видео сюда не приходит — только координаты людей на плане и счётчики.
+// Видео сюда не приходит – только координаты людей на плане и счётчики.
 
 import "./cabinet.css";
 import type { User } from "firebase/auth";
@@ -28,12 +28,12 @@ import { type CameraMark, type TwinPerson, type TwinPlan, CODE_STATE, cameraMark
 
 // ---------------------------------------------------------------- настройки
 
-/** Realtime Database проекта (как в iOS: TwinKeys.defaultDatabaseURL). Другой адрес — ?db=… (запоминается). */
+/** Realtime Database проекта (как в iOS: TwinKeys.defaultDatabaseURL). Другой адрес – ?db=… (запоминается). */
 const DEFAULT_DB = "https://jinpix-ac93d-default-rtdb.europe-west1.firebasedatabase.app";
 const DB_KEY = "cabinet.db";
 const SITE_KEY = "cabinet.site";
 const TAB_KEY = "cabinet.tab";
-/** Нет обновлений дольше — «нет связи». */
+/** Нет обновлений дольше – «нет связи». */
 const STALE_MS = 6000;
 
 function storageGet(k: string): string | null {
@@ -47,7 +47,7 @@ function storageSet(k: string, v: string): void {
   try {
     localStorage.setItem(k, v);
   } catch {
-    /* нет хранилища — не страшно */
+    /* нет хранилища – не страшно */
   }
 }
 
@@ -76,7 +76,7 @@ interface LiveCamera {
 }
 interface LiveDoc {
   meta?: { device?: string; deviceName?: string; platform?: string; status?: string; point?: string; ts?: number; demo?: boolean };
-  /** Демо на телефоне: план демо (TwinPlan в JSON) — с примерным магазином и двумя демо-камерами. */
+  /** Демо на телефоне: план демо (TwinPlan в JSON) – с примерным магазином и двумя демо-камерами. */
   demoPlan?: string | null;
   today?: LiveStat;
   cameras?: Record<string, LiveCamera>;
@@ -155,7 +155,7 @@ let embedded = false;
 let openProfile: (() => void) | null = null;
 let visible = true;
 const fmt = (n: number | undefined) => (n ?? 0).toLocaleString("ru-RU");
-const pct = (a: number | undefined, b: number | undefined) => (b && b > 0 ? `${Math.round(((a ?? 0) / b) * 100)}%` : "—");
+const pct = (a: number | undefined, b: number | undefined) => (b && b > 0 ? `${Math.round(((a ?? 0) / b) * 100)}%` : "–");
 
 // ---------------------------------------------------------------- вход
 
@@ -164,7 +164,7 @@ function renderLogin(error = ""): void {
   if (embedded) {
     root.append(h("div", { class: "cab-empty" },
       h("h2", { text: "Войдите в аккаунт" }),
-      h("p", { class: "cab-muted", text: "Здесь — все ваши точки: кто на связи, люди на плане в реальном времени, счётчики за сегодня, план и камеры. Войдите тем же аккаунтом, что в Mantis на точках." }),
+      h("p", { class: "cab-muted", text: "Здесь – все ваши точки: кто на связи, люди на плане в реальном времени, счётчики за сегодня, план и камеры. Войдите тем же аккаунтом, что в Mantis на точках." }),
       error ? h("p", { class: "cab-error", text: error }) : null,
       openProfile ? h("button", { class: "btn primary", type: "button", text: "Войти", onclick: () => openProfile?.() }) : null));
     return;
@@ -185,7 +185,7 @@ function renderLogin(error = ""): void {
     h("button", {
       class: "btn ghost small", type: "button", text: "Забыли пароль?",
       onclick: async () => {
-        if (!email.value) { msg.textContent = "Введите почту — пришлём ссылку для нового пароля"; return; }
+        if (!email.value) { msg.textContent = "Введите почту – пришлём ссылку для нового пароля"; return; }
         try {
           await resetPassword(email.value);
           msg.textContent = "Письмо отправлено";
@@ -254,7 +254,7 @@ function startSite(uid: string): void {
       const d = snap.data();
       const json = typeof d?.planJSON === "string" ? d.planJSON : null;
       const at = typeof d?.updatedAt === "number" ? d.updatedAt : 0;
-      // свои сохранения из редактора плана не перерисовываем — редактор уже показывает их
+      // свои сохранения из редактора плана не перерисовываем – редактор уже показывает их
       if (at && at === S.planAt) return;
       S.planAt = at;
       try {
@@ -286,7 +286,7 @@ function startSite(uid: string): void {
       S.live = snap.val() as LiveDoc | null;
       S.liveAt = Date.now();
       takePeople();
-      // демо включили или выключили — перерисовать план (у демо свой план)
+      // демо включили или выключили – перерисовать план (у демо свой план)
       if (S.tab === "now" && (wasDemo !== isDemo() || hadDemoPlan !== !!demoPlan())) renderBody();
       else syncNow();
     }, (e) => showError(`Realtime Database: ${friendlyError(e)}`)),
@@ -324,7 +324,7 @@ function demoPlan(): TwinPlan | null {
   }
 }
 
-/** План для вкладки «Сейчас»: в демо — план демо с телефона, иначе — план точки. */
+/** План для вкладки «Сейчас»: в демо – план демо с телефона, иначе – план точки. */
 function shownPlan(): TwinPlan | null {
   return demoPlan() ?? S.plan;
 }
@@ -377,7 +377,7 @@ function siteTitle(id: string): string {
   return S.sites.find((s) => s.id === id)?.name ?? (id === "main" ? "Основная точка" : id);
 }
 
-/** Выбор точки — свой список (точка, на связи ли, какое устройство), а не системный select. */
+/** Выбор точки – свой список (точка, на связи ли, какое устройство), а не системный select. */
 let pickOpen = false;
 
 function sitePicker(): HTMLElement {
@@ -427,7 +427,7 @@ function sitePicker(): HTMLElement {
 }
 
 function renderHeader(): void {
-  if (!headerEl || pickOpen) return; // список открыт — не перестраиваем под рукой
+  if (!headerEl || pickOpen) return; // список открыт – не перестраиваем под рукой
   const select = sitePicker();
   const tabs = h("nav", { class: "cab-tabs", "aria-label": "Разделы" });
   for (const [t, title] of [["now", "Сейчас"], ["plan", "План"], ["cameras", "Камеры"]] as [Tab, string][]) {
@@ -474,7 +474,7 @@ function renderNow(el: HTMLElement): void {
   shownOn = link.on;
   shownWhy = link.why;
   if (!link.on) {
-    // нет трансляции — не рисуем пустой или прошлый план, а честно говорим, почему
+    // нет трансляции – не рисуем пустой или прошлый план, а честно говорим, почему
     stage.append(h("div", { class: "cab-empty cab-nolive" },
       h("div", { class: "cab-nolive-ico", "aria-hidden": "true" }),
       h("h2", { text: "Нет трансляции" }),
@@ -486,11 +486,11 @@ function renderNow(el: HTMLElement): void {
   } else {
     stage.append(h("div", { class: "cab-empty" },
       h("h2", { text: "План точки ещё не нарисован" }),
-      h("p", { class: "cab-muted", text: "Нарисуйте план (размеры, витрины, вход, зоны) и привяжите камеры — тогда здесь появятся люди в реальном времени. Счётчики справа работают и без плана." }),
+      h("p", { class: "cab-muted", text: "Нарисуйте план (размеры, витрины, вход, зоны) и привяжите камеры – тогда здесь появятся люди в реальном времени. Счётчики справа работают и без плана." }),
       h("button", { class: "btn primary", type: "button", text: "Нарисовать план", onclick: () => { S.tab = "plan"; renderHeader(); renderBody(); } })));
   }
   sideEl = h("aside", { class: "cab-side" });
-  // легенда — те же цвета, что на телефоне
+  // легенда – те же цвета, что на телефоне
   const legend = h("div", { class: "tw-legend cab-legend" }, ...([["tracked", "идёт"], ["passed", "прошёл"], ["slowed", "притормозил"], ["looked", "смотрит"]] as [PersonState, string][])
     .map(([st, t]) => { const d = h("i", { class: "tw-dot" }); d.style.background = personColor(st); return h("span", {}, d, t); }));
   el.append(h("div", { class: "cab-stage-col" }, stage, link.on ? legend : null), sideEl);
@@ -501,7 +501,7 @@ function cameraMarks(plan: TwinPlan): CameraMark[] {
   const out: CameraMark[] = [];
   const ids = Object.keys(plan.calibrations);
   ids.forEach((id, i) => {
-    // поставлена на плане телефона заранее (ключ «plan-…») — подпись из привязки и пометка
+    // поставлена на плане телефона заранее (ключ «plan-…») – подпись из привязки и пометка
     const own = (plan.calibrations[id] as { name?: string }).name;
     const base = S.cameras.find((c) => c.id === id)?.name ?? S.live?.cameras?.[id]?.name ?? own ?? "Камера";
     const name = id.startsWith("plan-") ? `${base} · не привязана` : base;
@@ -535,10 +535,10 @@ function renderSide(): void {
   const age = S.liveAt ? Date.now() - S.liveAt : Infinity;
   const offline = !live || live.meta?.status === "offline" || age > STALE_MS || !S.online[S.site]?.length;
   const lastTs = live?.meta?.ts ? new Date(live.meta.ts) : null;
-  // нет соединения с Realtime Database дольше 8 с — честно говорим, что данные не доходят
+  // нет соединения с Realtime Database дольше 8 с – честно говорим, что данные не доходят
   const noLink = !S.connected && Date.now() - S.waitingSince > 8000;
   const statusText = noLink
-    ? "Нет соединения с облаком (Realtime Database) — данные точек не приходят"
+    ? "Нет соединения с облаком (Realtime Database) – данные точек не приходят"
     : !live
     ? "Точка ещё не передавала данные"
     : offline
@@ -554,8 +554,8 @@ function renderSide(): void {
       h("i", {}), h("div", {},
         h("b", { text: statusText }),
         h("small", { class: "cab-muted", text: live?.meta?.deviceName ? `${live.meta.deviceName}${live.meta.point ? ` · ${live.meta.point}` : ""}`
-          : `${siteTitle(S.site)} · аккаунт ${S.user?.email ?? ""} — на устройстве должен быть тот же аккаунт и код точки «${S.site}»` }))),
-    h("div", { class: "cab-now" }, h("span", { class: "cab-big mono", text: offline ? "—" : String(nowCount) }), h("span", { class: "cab-muted", text: "людей сейчас" })),
+          : `${siteTitle(S.site)} · аккаунт ${S.user?.email ?? ""} – на устройстве должен быть тот же аккаунт и код точки «${S.site}»` }))),
+    h("div", { class: "cab-now" }, h("span", { class: "cab-big mono", text: offline ? "–" : String(nowCount) }), h("span", { class: "cab-muted", text: "людей сейчас" })),
     // телефон передаёт счётчики текущего подсчёта (обнуляются при «Старт» и «Сброс»)
     h("h3", { text: isDemo() ? "Демо с запуска" : live?.meta?.platform === "ios" ? "С запуска подсчёта" : "Сегодня" }),
     h("div", { class: "cab-stats" },
@@ -587,21 +587,21 @@ function stat(title: string, value: string, sub: string, cls = ""): HTMLElement 
 // обновить «N с назад» и «нет связи», даже если данные перестали приходить
 setInterval(() => { if (visible) syncNow(); }, 2000);
 
-/** Состояние связи с точкой: идёт ли сейчас трансляция и если нет — почему. */
+/** Состояние связи с точкой: идёт ли сейчас трансляция и если нет – почему. */
 function linkState(): { on: boolean; offline: boolean; why: string } {
   const live = S.live;
   const age = S.liveAt ? Date.now() - S.liveAt : Infinity;
   const offline = !live || live.meta?.status === "offline" || age > STALE_MS || !S.online[S.site]?.length;
   const noLink = !S.connected && Date.now() - S.waitingSince > 8000;
   const on = !noLink && !offline && live?.meta?.status === "counting";
-  const why = noLink ? "Нет соединения с облаком — проверьте интернет на этом устройстве."
-    : !live ? "Точка ещё ничего не передавала. Запустите на точке мониторинг или демо — в Mantis на iPhone, Mac, Windows или в браузере, — под этим же аккаунтом."
+  const why = noLink ? "Нет соединения с облаком – проверьте интернет на этом устройстве."
+    : !live ? "Точка ещё ничего не передавала. Запустите на точке мониторинг или демо – в Mantis на iPhone, Mac, Windows или в браузере, – под этим же аккаунтом."
       : offline ? "Устройство на точке не на связи: выключено, нет интернета или закрыто приложение."
         : "Устройство на связи, но подсчёт не запущен. Запустите мониторинг или демо на точке.";
   return { on, offline, why };
 }
 
-/** Трансляция появилась или пропала — перестроить «Сейчас» один раз; иначе только обновить сводку (без мигания). */
+/** Трансляция появилась или пропала – перестроить «Сейчас» один раз; иначе только обновить сводку (без мигания). */
 function syncNow(): void {
   if (S.tab !== "now") return;
   const l = linkState();
@@ -642,7 +642,7 @@ async function savePlan(plan: TwinPlan): Promise<void> {
   }
 }
 
-/** Подложка: уменьшаем до 1600 px и храним в Firestore как JPEG (документ — до 1 МБ). */
+/** Подложка: уменьшаем до 1600 px и храним в Firestore как JPEG (документ – до 1 МБ). */
 async function saveBackground(blob: Blob | null): Promise<void> {
   if (!S.user) return;
   const ref_ = doc(fs, "users", S.user.uid, "sites", S.site, "assets", "background");
@@ -659,7 +659,7 @@ async function saveBackground(blob: Blob | null): Promise<void> {
     c.height = Math.round(bmp.height * k);
     c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
     const jpeg = c.toDataURL("image/jpeg", 0.8).split(",")[1] ?? "";
-    if (jpeg.length > 950_000) throw new Error("картинка слишком большая — возьмите поменьше");
+    if (jpeg.length > 950_000) throw new Error("картинка слишком большая – возьмите поменьше");
     await setDoc(ref_, { jpeg, at: Date.now() });
     S.background = bmp;
   } catch (e) {
@@ -687,11 +687,11 @@ async function loadFrame(cam: RegCamera): Promise<HTMLImageElement | null> {
 }
 
 const KIND_TITLE: Record<string, string> = { phone: "камера телефона", usb: "камера компьютера / USB", ip: "IP-камера", demo: "демо-камера" };
-/** Камеры компьютера (веб, Windows) привязываются к плану в самом приложении — кадр в облако не отправляют. */
+/** Камеры компьютера (веб, Windows) привязываются к плану в самом приложении – кадр в облако не отправляют. */
 const bindsLocally = (c: RegCamera) => c.platform === "web" || c.platform === "windows";
 const hhmm = (d: Date) => d.toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
-/** Кадр камеры в превью: рисуем на холсте с полями (как в окне привязки) — работает и для вертикальных кадров. */
+/** Кадр камеры в превью: рисуем на холсте с полями (как в окне привязки) – работает и для вертикальных кадров. */
 function thumbCanvas(img: HTMLImageElement): HTMLCanvasElement {
   const c = h("canvas", { class: "cab-thumb-img" });
   const W = img.naturalWidth || img.width, H = img.naturalHeight || img.height;
@@ -711,14 +711,14 @@ function thumbCanvas(img: HTMLImageElement): HTMLCanvasElement {
 function renderCameras(el: HTMLElement): void {
   const page = h("section", { class: "cab-campage" });
   el.append(page);
-  // как это работает — два шага, один раз сверху
+  // как это работает – два шага, один раз сверху
   page.append(h("div", { class: "cab-cams-intro" },
     h("div", {},
       h("h2", { text: `Камеры точки «${siteTitle(S.site)}»` }),
       h("p", { class: "cab-muted", text: "Чтобы люди с камеры появлялись на плане, у камеры должны быть кадр и место на плане." })),
     h("ol", { class: "cab-steps" },
       h("li", {}, h("b", { text: "Кадр" }), h("span", { class: "cab-muted", text: "приходит с телефона: Профиль → «Цифровой двойник в облаке» → «Отправить кадр для привязки»" })),
-      h("li", {}, h("b", { text: "Привязка" }), h("span", { class: "cab-muted", text: "здесь: «Привязать к плану» — где камера стоит и что видит" })))));
+      h("li", {}, h("b", { text: "Привязка" }), h("span", { class: "cab-muted", text: "здесь: «Привязать к плану» – где камера стоит и что видит" })))));
   if (!S.cameras.length) {
     page.append(h("div", { class: "cab-empty" },
       h("h2", { text: "Камер пока нет" }),
@@ -727,7 +727,7 @@ function renderCameras(el: HTMLElement): void {
   }
   if (!S.plan) {
     page.append(h("div", { class: "cab-note" },
-      h("span", { text: "Сначала нарисуйте план точки — к нему привязываются камеры." }),
+      h("span", { text: "Сначала нарисуйте план точки – к нему привязываются камеры." }),
       h("button", { class: "btn small primary", type: "button", text: "Нарисовать план", onclick: () => { S.tab = "plan"; storageSet(TAB_KEY, "plan"); renderHeader(); renderBody(); } })));
   }
   // по устройствам: сразу видно, какой телефон или компьютер на связи
@@ -759,7 +759,7 @@ function cameraCard(cam: RegCamera, colorIndex: number, online: boolean): HTMLEl
   const badge = { ok: "На плане", todo: "Не привязана", wait: "Нет кадра" }[state];
 
   const thumb = h("div", { class: "cab-thumb" },
-    h("span", { class: "cab-muted small", text: hasFrame ? "загрузка кадра…" : local ? "кадр — в приложении на компьютере" : "кадра ещё нет" }));
+    h("span", { class: "cab-muted small", text: hasFrame ? "загрузка кадра…" : local ? "кадр – в приложении на компьютере" : "кадра ещё нет" }));
   if (hasFrame) {
     void loadFrame(cam).then((img) => {
       thumb.replaceChildren(img ? thumbCanvas(img) : h("span", { class: "cab-muted small", text: "кадр не загрузился" }));
@@ -775,7 +775,7 @@ function cameraCard(cam: RegCamera, colorIndex: number, online: boolean): HTMLEl
     ? h("ul", { class: "cab-cam-steps" },
       step(calibrated, "Место на плане", "Задаётся в Mantis на компьютере: «Мониторинг» → «Камеры» → «Настроить»."))
     : h("ul", { class: "cab-cam-steps" },
-      step(hasFrame, "Кадр с камеры", online ? "На телефоне: Профиль → «Цифровой двойник в облаке» → «Отправить кадр для привязки»." : "Телефон не на связи — откройте на нём Mantis и отправьте кадр."),
+      step(hasFrame, "Кадр с камеры", online ? "На телефоне: Профиль → «Цифровой двойник в облаке» → «Отправить кадр для привязки»." : "Телефон не на связи – откройте на нём Mantis и отправьте кадр."),
       step(calibrated, "Место на плане", hasFrame ? (S.plan ? "Нажмите «Привязать к плану»." : "Сначала нарисуйте план.") : "После кадра."));
 
   const actions = h("div", { class: "cab-row" });
@@ -788,7 +788,7 @@ function cameraCard(cam: RegCamera, colorIndex: number, online: boolean): HTMLEl
   if (calibrated && !local) actions.append(h("button", { class: "btn small ghost", type: "button", text: "Убрать с плана", onclick: () => void unbind(cam) }));
   if (!online) {
     actions.append(h("button", {
-      class: "link cab-forget", type: "button", text: "Убрать из списка", title: "Камера больше не используется — убрать её из списка точки",
+      class: "link cab-forget", type: "button", text: "Убрать из списка", title: "Камера больше не используется – убрать её из списка точки",
       onclick: () => void forget(cam),
     }));
   }
@@ -802,7 +802,7 @@ function cameraCard(cam: RegCamera, colorIndex: number, online: boolean): HTMLEl
       actions.childElementCount ? actions : null));
 }
 
-/** Убрать камеру из списка точки (реестр, кадр и привязку) — для старых телефонов и камер. */
+/** Убрать камеру из списка точки (реестр, кадр и привязку) – для старых телефонов и камер. */
 async function forget(cam: RegCamera): Promise<void> {
   if (!S.user) return;
   if (!(await ask({ title: `Убрать «${cam.name}» из списка?`, text: `${cam.deviceName || "Устройство"} · ${KIND_TITLE[cam.kind] ?? "камера"}. Если камера снова начнёт передавать, она появится опять.`, ok: "Убрать", danger: true }))) return;
@@ -829,7 +829,7 @@ async function bind(cam: RegCamera, colorIndex: number): Promise<void> {
     colorIndex,
     canRemove: !!plan.calibrations[cam.id],
     still: () => ({ image: img, boxes: [], width: img.naturalWidth, height: img.naturalHeight }),
-    message: () => "Отметьте 4 точки на полу в кадре и те же точки на плане. Если пола в кадре почти нет — выберите привязку по сектору: где камера, куда смотрит и как далеко видит.",
+    message: () => "Отметьте 4 точки на полу в кадре и те же точки на плане. Если пола в кадре почти нет – выберите привязку по сектору: где камера, куда смотрит и как далеко видит.",
     markName: () => cam.name,
   });
   if (res === undefined) return;
@@ -856,7 +856,7 @@ export interface CabinetView {
   hide(): void;
 }
 
-/** Показать точки в элементе: в приложении (embedded) — раздел «Точки», иначе — страница личного кабинета. */
+/** Показать точки в элементе: в приложении (embedded) – раздел «Точки», иначе – страница личного кабинета. */
 export function mountCabinet(el: HTMLElement, o: { embedded?: boolean; openProfile?: () => void } = {}): CabinetView {
   root = el;
   embedded = !!o.embedded;

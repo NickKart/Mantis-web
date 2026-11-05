@@ -5,7 +5,7 @@ export interface AskOptions {
   text?: string;
   ok?: string;
   cancel?: string;
-  /** Опасное действие (остановить, удалить) — кнопка красная. */
+  /** Опасное действие (остановить, удалить) – кнопка красная. */
   danger?: boolean;
 }
 
@@ -48,7 +48,7 @@ function build(o: AskOptions, input?: HTMLInputElement): { dialog: HTMLDialogEle
   return { dialog, okBtn, cancelBtn };
 }
 
-/** Подтверждение: true — «OK», false — отмена или Esc. */
+/** Подтверждение: true – «OK», false – отмена или Esc. */
 export function ask(o: AskOptions): Promise<boolean> {
   return new Promise((resolve) => {
     const { dialog, okBtn } = build(o);

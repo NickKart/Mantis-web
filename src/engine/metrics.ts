@@ -1,7 +1,7 @@
 // Дополнительная аналитика по траекториям людей (итог по всему видео).
 // Порт iOS ExtendedMetrics.swift (без тепловой карты): средняя скорость, остановки, время взгляда,
 // подошли ближе, оглянулись, вход в магазин, группы, направления потока.
-// Расстояния оцениваются по росту человека (~1,7 м) — это оценка, а не измерение.
+// Расстояния оцениваются по росту человека (~1,7 м) – это оценка, а не измерение.
 
 import type { TrackSummary } from "./analytics";
 import { MAX_DT } from "./analytics";
@@ -30,7 +30,7 @@ export interface ExtendedMetrics {
   totalLookSeconds: number;
   approached: number;
   lookedBack: number;
-  /** null — линия входа не задана. */
+  /** null – линия входа не задана. */
   entered: number | null;
   singles: number;
   groups: number;
@@ -124,7 +124,7 @@ export function computeMetrics(
       m.enterTimes.push(enterT);
     }
 
-    // Оглянулся: смотрел в сторону витрины уже после прохода —
+    // Оглянулся: смотрел в сторону витрины уже после прохода –
     // после пересечения линии или когда уже удаляется (рамка меньше пика на 10%)
     let back = 0;
     for (let i = 1; i < v.length; i++) {
@@ -148,7 +148,7 @@ export function computeMetrics(
   if (speeds.length) m.avgSpeed = speeds.reduce((a, b) => a + b, 0) / speeds.length;
   if (stopDurations.length) m.avgStopSeconds = stopDurations.reduce((a, b) => a + b, 0) / stopDurations.length;
 
-  // Время взгляда — из итогов подсчёта (то же, что даёт «Посмотрели»)
+  // Время взгляда – из итогов подсчёта (то же, что даёт «Посмотрели»)
   const looks = summaries.filter((s) => s.looked && tracks.has(s.trackId)).map((s) => s.lookTime);
   m.lookers = looks.length;
   m.totalLookSeconds = looks.reduce((a, b) => a + b, 0);

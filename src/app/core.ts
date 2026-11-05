@@ -259,8 +259,7 @@ export class Core {
       this.toast("Запись идёт во время подсчёта – сначала запустите подсчёт", true);
       return;
     }
-    const refs: RecCameraRef[] = this.pilot.channels.flatMap((ch, i) =>
-      this.twin.plan.calibrations[ch.id] ? [{ id: ch.id, name: channelShort(ch.config), colorIndex: channelColorIndex(ch.config, i) }] : []);
+    const refs: RecCameraRef[] = this.pilot.channels.map((ch, i) => ({ id: ch.id, name: channelShort(ch.config), colorIndex: channelColorIndex(ch.config, i) }));
     this.twin.startRecording(refs);
     const started = performance.now();
     const base = { ...this.pilot.totals };

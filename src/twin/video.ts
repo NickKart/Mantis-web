@@ -1,11 +1,11 @@
 // Цифровой двойник для готового видео: тот же план, но люди берутся из анализа ролика.
-// Видео и план идут синхронно, тепловая карта и зоны — за ролик (до текущего момента). Порт VideoTwin.swift (macOS).
+// Видео и план идут синхронно, тепловая карта и зоны – за ролик (до текущего момента). Порт VideoTwin.swift (macOS).
 
 import type { AnalyticsConfig } from "../engine/config";
 import type { Pt } from "../engine/geometry";
 import { type OverlayBox, Session } from "../engine/session";
 import type { Detector } from "../detector";
-import { CameraProjector, type CameraCalibration, type RecFrame, STATE_CODE, Timeline, type TwinPlan, planContains } from "./plan";
+import { CameraProjector, type CameraCalibration, FLAG_ENTERED, FLAG_RETURNED, type RecFrame, STATE_CODE, Timeline, type TwinPlan, planContains } from "./plan";
 
 /** Кадр анализа: время и люди (рамки в пикселях кадра). */
 export interface AnalyzedFrame {
@@ -45,7 +45,8 @@ export class VideoTwinBuilder {
       const prev = this.smooth.get(b.trackId);
       const s = prev ? { x: prev.x + (c.x - prev.x) * 0.5, y: prev.y + (c.y - prev.y) * 0.5 } : c;
       this.smooth.set(b.trackId, s);
-      row.p.push({ i: String(b.trackId), x: s.x, y: s.y, s: STATE_CODE[b.state] });
+      const f = (b.returned ? FLAG_RETURNED : 0) | (b.entered ? FLAG_ENTERED : 0);
+      row.p.push({ i: String(b.trackId), x: s.x, y: s.y, s: STATE_CODE[b.state], ...(f ? { f } : {}) });
     }
     this.tl.add(row, 1 / 15);
   }
@@ -83,7 +84,7 @@ export async function grabStill(video: HTMLVideoElement, t: number): Promise<Ima
 }
 
 /**
- * Анализ ролика: кадры по 15 в секунду → нейросеть → трекер → подсчёт. onFrame — каждый кадр (двойник строится на ходу).
+ * Анализ ролика: кадры по 15 в секунду → нейросеть → трекер → подсчёт. onFrame – каждый кадр (двойник строится на ходу).
  */
 export async function analyzeVideo(
   video: HTMLVideoElement, det: Detector, cfg: AnalyticsConfig, entrance: Pt[] | null, fps: number,

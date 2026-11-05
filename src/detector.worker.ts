@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 // Нейросеть YOLO11-pose в отдельном потоке: кадр → люди с рамками и 17 ключевыми точками.
-// Сначала пробуем WebGPU (видеокарта), если его нет — WASM на процессоре.
+// Сначала пробуем WebGPU (видеокарта), если его нет – WASM на процессоре.
 
 import * as ort from "onnxruntime-web/webgpu";
 // Рантайм WASM отдельными файлами: иначе многопоточный WASM запускает потоки из этого же скрипта и зависает
@@ -10,7 +10,7 @@ import { decodePose, makeLetterbox } from "./engine/decoder";
 import type { RawDetection } from "./engine/bytetrack";
 
 export type WorkerRequest =
-  /** threads: 0 — сколько позволит браузер, 1 — один поток (самый совместимый вариант). */
+  /** threads: 0 – сколько позволит браузер, 1 – один поток (самый совместимый вариант). */
   | { type: "init"; modelUrl: string; preferGpu: boolean; threads: number }
   | {
       type: "detect";
@@ -24,7 +24,7 @@ export type WorkerRequest =
 
 export type WorkerResponse =
   | { type: "ready"; backend: string; inputSize: number }
-  /** Этап загрузки — главный поток по нему отмеряет таймауты и показывает статус. */
+  /** Этап загрузки – главный поток по нему отмеряет таймауты и показывает статус. */
   | { type: "stage"; stage: "model" | "gpu" | "cpu" }
   | { type: "result"; id: number; detections: RawDetection[]; maxScore: number; ms: number }
   | { type: "error"; id?: number; message: string };
@@ -39,7 +39,7 @@ let input: Float32Array | null = null;
 
 const post = (m: WorkerResponse, transfer: Transferable[] = []) => (self as DedicatedWorkerGlobalScope).postMessage(m, transfer);
 
-/** Есть ли рабочий адаптер WebGPU (у navigator.gpu он может вернуть null — например, без видеокарты). */
+/** Есть ли рабочий адаптер WebGPU (у navigator.gpu он может вернуть null – например, без видеокарты). */
 async function hasGpu(): Promise<boolean> {
   const gpu = (self.navigator as Navigator & { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
   if (!gpu) return false;
@@ -53,7 +53,7 @@ async function hasGpu(): Promise<boolean> {
 
 async function init(modelUrl: string, preferGpu: boolean, threads: number): Promise<void> {
   ort.env.wasm.wasmPaths = { mjs: new URL(ortMjsUrl, self.location.href).href, wasm: new URL(ortWasmUrl, self.location.href).href };
-  // Несколько потоков работают только при заголовках COOP/COEP (см. vite.config.ts), иначе — один
+  // Несколько потоков работают только при заголовках COOP/COEP (см. vite.config.ts), иначе – один
   ort.env.wasm.numThreads = threads === 1 || !self.crossOriginIsolated ? 1 : Math.min(4, self.navigator.hardwareConcurrency || 2);
   ort.env.logLevel = "error";
   post({ type: "stage", stage: "model" });
@@ -118,8 +118,8 @@ async function detect(req: Extract<WorkerRequest, { type: "detect" }>): Promise<
   post({ type: "result", id: req.id, detections, maxScore, ms: performance.now() - started });
 }
 
-// Задачи — строго по одной: несколько камер шлют кадры одновременно, а сессия нейросети (особенно WebGPU)
-// не умеет считать два кадра параллельно — без очереди она зависает и все камеры получают «нейросеть не отвечает».
+// Задачи – строго по одной: несколько камер шлют кадры одновременно, а сессия нейросети (особенно WebGPU)
+// не умеет считать два кадра параллельно – без очереди она зависает и все камеры получают «нейросеть не отвечает».
 let queue: Promise<void> = Promise.resolve();
 self.onmessage = (e: MessageEvent<WorkerRequest>) => {
   const m = e.data;

@@ -1,5 +1,5 @@
-// Realtime Database цифрового двойника (живое состояние точек) — одно подключение на страницу.
-// Только WebSocket: запасной способ SDK (long-polling через <script>) на этой странице не работает —
+// Realtime Database цифрового двойника (живое состояние точек) – одно подключение на страницу.
+// Только WebSocket: запасной способ SDK (long-polling через <script>) на этой странице не работает –
 // её изоляция (COOP/COEP, нужна нейросети) блокирует такие скрипты, и подключение молча «висит».
 
 import { type Database, forceWebSockets, getDatabase } from "firebase/database";
@@ -15,7 +15,7 @@ export function twinDatabase(url = TWIN_DB_URL): Database {
     forceWebSockets();
     forced = true;
     try {
-      // прошлый неудачный WebSocket SDK запоминает и дальше пробует только long-polling — сбрасываем
+      // прошлый неудачный WebSocket SDK запоминает и дальше пробует только long-polling – сбрасываем
       for (const k of Object.keys(localStorage)) if (k.startsWith("firebase:previous_websocket_failure")) localStorage.removeItem(k);
     } catch {
       /* нет хранилища */

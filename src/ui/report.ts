@@ -1,4 +1,4 @@
-// Итоги анализа видео: подписи событий и выгрузка файлов (JSON, CSV — форматы как у Python-прототипа).
+// Итоги анализа видео: подписи событий и выгрузка файлов (JSON, CSV – форматы как у Python-прототипа).
 
 import type { AnalyticsEvent } from "../engine/analytics";
 import type { SessionReport } from "../engine/session";

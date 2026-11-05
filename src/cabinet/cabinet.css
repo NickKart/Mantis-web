@@ -1,4 +1,4 @@
-/* Личный кабинет: шапка, план с людьми слева, сводка справа; на телефоне — друг под другом. */
+/* Личный кабинет: шапка, план с людьми слева, сводка справа; на телефоне – друг под другом. */
 .cab { min-height: 100vh; display: flex; flex-direction: column; }
 .cab-muted { color: var(--muted); }
 .cab-ok { color: var(--ov-green); }
@@ -86,7 +86,7 @@
 .cab-stage-col .cab-stage { flex: 1; }
 .cab-legend { padding: 0 4px; }
 
-/* выбор точки — свой список */
+/* выбор точки – свой список */
 .cab-pick { position: relative; }
 .cab-pick-btn {
   display: inline-flex; align-items: center; gap: 9px; min-width: 150px; max-width: 280px;
@@ -123,7 +123,7 @@
 .cab-nolive-ico::before { width: 12px; height: 12px; background: var(--muted); }
 .cab-nolive-ico::after { width: 30px; height: 30px; border: 2px solid var(--muted); opacity: 0.45; }
 
-/* «Камеры»: шаги сверху, камеры по устройствам, у каждой — статус, что есть и что сделать */
+/* «Камеры»: шаги сверху, камеры по устройствам, у каждой – статус, что есть и что сделать */
 .cab-campage { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .cab-cams-intro { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-start; justify-content: space-between;
   background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }

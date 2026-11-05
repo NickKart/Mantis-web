@@ -1,7 +1,7 @@
 // Настольная оболочка Mantis (Windows, Tauri): страница та же, но открыта внутри приложения.
 // Оболочка открывает страницу с ?desktop=windows и даёт несколько команд через IPC Tauri:
 // запрет сна, автозапуск при входе в систему, сведения о компьютере, выход.
-// В обычном браузере всё это недоступно — функции возвращают null / false.
+// В обычном браузере всё это недоступно – функции возвращают null / false.
 
 type Invoke = (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
 
@@ -66,7 +66,7 @@ async function browserWake(on: boolean): Promise<void> {
       wakeLock = null;
     }
   } catch {
-    wakeLock = null; // вкладка не на экране — попробуем при возвращении
+    wakeLock = null; // вкладка не на экране – попробуем при возвращении
   }
 }
 document.addEventListener("visibilitychange", () => {
@@ -93,7 +93,7 @@ export interface AgentInfo {
 const agentUrl = (path: string) => new URL(path, new URL(import.meta.env.BASE_URL, location.href));
 let agentPromise: Promise<AgentInfo | null> | null = null;
 
-/** Сведения об агенте; null — страница открыта не через агента. */
+/** Сведения об агенте; null – страница открыта не через агента. */
 export function agentInfo(): Promise<AgentInfo | null> {
   agentPromise ??= (async () => {
     if (hasIpc()) return null;

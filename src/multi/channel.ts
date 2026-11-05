@@ -1,6 +1,6 @@
 // Одна камера пилота: свой источник (камера компьютера / USB или IP-камера через мост), своя разметка,
 // своя чувствительность, свой подсчёт и свой перезапуск при сбоях. Прирост счётчиков отдаёт пилоту раз в секунду.
-// Порт PilotChannel.swift (macOS). Нейросеть общая на все камеры — кадры встают к ней в очередь.
+// Порт PilotChannel.swift (macOS). Нейросеть общая на все камеры – кадры встают к ней в очередь.
 
 import { type AnalyticsConfig, defaultConfig } from "../engine/config";
 import type { ShowcaseDirection } from "../engine/headpose";
@@ -15,15 +15,15 @@ export interface ChannelConfig {
   id: string;
   name: string;
   kind: "webcam" | "ip";
-  /** Камера компьютера (deviceId); пусто — камера по умолчанию. */
+  /** Камера компьютера (deviceId); пусто – камера по умолчанию. */
   deviceId: string;
   ip: IpCameraConfig | null;
   markup: Markup;
   direction: ShowcaseDirection;
   filter: DetectionFilter;
-  /** Псевдоним — короткая метка камеры на плане и в списках, например «№1». */
+  /** Псевдоним – короткая метка камеры на плане и в списках, например «№1». */
   alias?: string;
-  /** Цвет камеры (номер в CAMERA_COLORS): точка у названия, значок и лучи на плане. Нет — по порядку. */
+  /** Цвет камеры (номер в CAMERA_COLORS): точка у названия, значок и лучи на плане. Нет – по порядку. */
   color?: number;
   /** Разметка кадра пройдена в «Настройке камеры» (новый интерфейс). */
   ready?: boolean;
@@ -41,7 +41,7 @@ export function newChannelConfig(p: Partial<ChannelConfig> = {}): ChannelConfig 
     kind: "webcam",
     deviceId: "",
     ip: null,
-    markup: defaultMarkup(), // линий по умолчанию нет — только зона витрины
+    markup: defaultMarkup(), // линий по умолчанию нет – только зона витрины
     direction: "camera",
     filter: defaultFilter(),
     ...p,
@@ -53,9 +53,9 @@ export function normalizeChannelConfig(c: ChannelConfig): ChannelConfig {
   return { ...c, filter: normalizeFilter(c.filter) };
 }
 
-/** Где витрина относительно камеры — от этого зависит, что считается «посмотрел». */
+/** Где витрина относительно камеры – от этого зависит, что считается «посмотрел». */
 export const SHOWCASE_DIRECTIONS: [ShowcaseDirection, string, string][] = [
-  ["camera", "Камера в витрине", "Камера в витрине или на полке: «посмотрел» — человек повернулся лицом к камере."],
+  ["camera", "Камера в витрине", "Камера в витрине или на полке: «посмотрел» – человек повернулся лицом к камере."],
   ["left", "Витрина слева", "Камера сбоку, витрина слева в кадре: засчитывается поворот головы влево, к витрине."],
   ["right", "Витрина справа", "Камера сбоку, витрина справа в кадре: засчитывается поворот головы вправо, к витрине."],
 ];
@@ -103,7 +103,7 @@ function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> 
 export interface ChannelHooks {
   getDetector: () => Promise<Detector>;
   resetDetector: () => void;
-  /** Кадр с результатом подсчёта (fr = null — просто картинка, предпросмотр). */
+  /** Кадр с результатом подсчёта (fr = null – просто картинка, предпросмотр). */
   onFrame: (ch: Channel, shot: ImageBitmap, fr: FrameResult | null) => void;
   onChange: (ch: Channel) => void;
 }
@@ -185,7 +185,7 @@ export class Channel {
     return openWebcam(c.deviceId || null);
   }
 
-  /** Закрыть источник. only — закрыть только свой (циклы предпросмотра, проверки и подсчёта не трогают чужие). */
+  /** Закрыть источник. only – закрыть только свой (циклы предпросмотра, проверки и подсчёта не трогают чужие). */
   private closeSource(only?: LiveSource | null): void {
     if (only !== undefined) {
       only?.close();
@@ -275,7 +275,7 @@ export class Channel {
 
   // ---------------------------------------------------------------- проверка чувствительности
 
-  /** Открыто окно «Чувствительность»: видны отброшенные рамки; если пилот не идёт — подсчёт для проверки. */
+  /** Открыто окно «Чувствительность»: видны отброшенные рамки; если пилот не идёт – подсчёт для проверки. */
   async startTuning(f: DetectionFilter): Promise<void> {
     this.tuneFilter = structuredClone(f);
     this.filterRt.diagnostics = true;
@@ -286,12 +286,12 @@ export class Channel {
     this.tuneLoopDone = this.tuneLoop();
   }
 
-  /** Черновик поменялся: уверенность, рост, зоны и неподвижные — сразу; уровень и строгость — новым проверочным подсчётом. */
+  /** Черновик поменялся: уверенность, рост, зоны и неподвижные – сразу; уровень и строгость – новым проверочным подсчётом. */
   setTuneFilter(f: DetectionFilter): void {
     this.tuneFilter = structuredClone(f);
   }
 
-  /** Окно закрыто. previewAfter — вернуть предпросмотр (экран пилота открыт). */
+  /** Окно закрыто. previewAfter – вернуть предпросмотр (экран пилота открыт). */
   async stopTuning(previewAfter: boolean): Promise<void> {
     if (!this.tuning) return;
     this.tuning = false;
@@ -409,7 +409,7 @@ export class Channel {
     this.width = src.width;
     this.height = src.height;
     this.set(tuning ? "preview" : "starting", "Загружаю нейросеть…");
-    // пока грузится нейросеть — показываем картинку камеры (окна разметки, чувствительности, сетка)
+    // пока грузится нейросеть – показываем картинку камеры (окна разметки, чувствительности, сетка)
     let detReady = false;
     const detP = this.hooks.getDetector().finally(() => (detReady = true));
     detP.catch(() => undefined);
@@ -424,7 +424,7 @@ export class Channel {
     if (!active()) return;
     const W = src.width, H = src.height;
     const newSession = () => {
-      // в проверке — пороги из черновика, в пилоте — сохранённые (черновик применится после «Сохранить»)
+      // в проверке – пороги из черновика, в пилоте – сохранённые (черновик применится после «Сохранить»)
       const cfg = channelAnalyticsConfig(this.config, tuning ? this.filter : this.config.filter);
       const s = new Session(cfg, W, H, this.config.markup.entranceEnabled ? this.config.markup.entrance : null, fps);
       s.trackFilter = (people, t) => this.filterRt.dropStatic(people, this.filter, t);
@@ -444,7 +444,7 @@ export class Channel {
     let lastFr: FrameResult | null = null;
     while (active()) {
       if (tuning && this.tuneSessionKey !== `${this.filter.level}|${this.filter.behavior}`) {
-        // уровень или строгость поменялись — проверочный подсчёт с новыми порогами
+        // уровень или строгость поменялись – проверочный подсчёт с новыми порогами
         this.tuneSession = newSession();
       }
       if (!tuning && this.restartRequested) {
@@ -458,7 +458,7 @@ export class Channel {
       const shot = await withTimeout(src.grab(), 30_000, "камера не присылает кадры");
       let res;
       try {
-        // пока нейросеть считает этот кадр, картинка камеры идёт дальше (с рамками прошлого кадра) — не «подвисает»
+        // пока нейросеть считает этот кадр, картинка камеры идёт дальше (с рамками прошлого кадра) – не «подвисает»
         res = await this.showWhile(src, withTimeout(det.detect(shot, W, H, 0.25), 20_000, "нейросеть не отвечает"), lastFr, active);
       } catch (e) {
         shot.close();
@@ -472,7 +472,7 @@ export class Channel {
       ms = ms ? ms * 0.9 + res.ms * 0.1 : res.ms;
 
       const session = (tuning ? this.tuneSession : this.session)!;
-      // чувствительность применяется сразу (порог, рост, зоны, неподвижные), строгость поведения — с нового куска
+      // чувствительность применяется сразу (порог, рост, зоны, неподвижные), строгость поведения – с нового куска
       const t = (now - t0) / 1000;
       const kept = this.filterRt.apply(res.detections, this.filter, t, W, H).kept;
       const fr = session.update(t, kept);

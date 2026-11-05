@@ -1,7 +1,7 @@
-// Статистика по каждой камере пилота — порт CameraHourlyStore (CameraStats.swift, macOS).
-// Общая статистика (сумма камер) по-прежнему лежит в HourlyStore и users/{uid}/hours — её видят iPhone, Mac и веб.
-// По камерам — отдельно: localStorage этого компьютера и Firestore users/{uid}/camera_hours/{камера}_{2026-10-15}
-// (документ на камеру и день: { camera, name, day, device, hours: { "14": HourStat } }) — тот же формат, что у Mac.
+// Статистика по каждой камере пилота – порт CameraHourlyStore (CameraStats.swift, macOS).
+// Общая статистика (сумма камер) по-прежнему лежит в HourlyStore и users/{uid}/hours – её видят iPhone, Mac и веб.
+// По камерам – отдельно: localStorage этого компьютера и Firestore users/{uid}/camera_hours/{камера}_{2026-10-15}
+// (документ на камеру и день: { camera, name, day, device, hours: { "14": HourStat } }) – тот же формат, что у Mac.
 
 import { type CameraDay, loadCameraHours, saveCameraDays } from "../cloud/firebase";
 import { type HourStat, addHours, emptyHour, hourKey, isEmptyHour, keyDate, mergeHours, parseHour } from "../pilot/hours";
@@ -20,7 +20,7 @@ export class CameraHourlyStore {
   hours: Record<string, Record<string, HourStat>> = {};
   /** камера → название (последнее известное). */
   names: Record<string, string> = {};
-  /** "камера|2026-10-15" — дни, которые надо отправить. */
+  /** "камера|2026-10-15" – дни, которые надо отправить. */
   private dirtyDays = new Set<string>();
   private lastSave = 0;
 
@@ -86,7 +86,7 @@ export class CameraHourlyStore {
     this.dirtyDays.clear();
     this.saveLocal();
     try {
-      // без интернета Firestore держит запись в своей очереди — долго не ждём
+      // без интернета Firestore держит запись в своей очереди – долго не ждём
       await Promise.race([saveCameraDays(uid, this.deviceId(), docs), new Promise((r) => setTimeout(r, 20_000))]);
     } catch (e) {
       for (const d of taken) this.dirtyDays.add(d);
@@ -113,7 +113,7 @@ export class CameraHourlyStore {
     await this.flush(uid);
   }
 
-  /** Сумма камеры начиная с from (null — за всё время). */
+  /** Сумма камеры начиная с from (null – за всё время). */
   total(camera: string, from: Date | null): HourStat {
     let t = emptyHour();
     for (const [k, v] of Object.entries(this.hours[camera] ?? {})) {

@@ -1,4 +1,4 @@
-// Почасовая статистика пилота. Формат и правила — как в iOS (Business.swift: HourStat, HourKey, HourlyStore),
+// Почасовая статистика пилота. Формат и правила – как в iOS (Business.swift: HourStat, HourKey, HourlyStore),
 // чтобы данные из браузера и с iPhone лежали в одном месте Firestore: users/{uid}/hours/{2026-10-03-14}.
 
 export interface HourStat {
@@ -23,7 +23,7 @@ export const addHours = (a: HourStat, b: HourStat): HourStat => {
   return o;
 };
 
-/** Слияние двух копий одного часа (браузер и облако): по каждому полю — максимум, как в iOS. */
+/** Слияние двух копий одного часа (браузер и облако): по каждому полю – максимум, как в iOS. */
 export const mergeHours = (a: HourStat, b: HourStat): HourStat => {
   const o = emptyHour();
   for (const f of FIELDS) o[f] = Math.max(a[f], b[f]);
@@ -32,7 +32,7 @@ export const mergeHours = (a: HourStat, b: HourStat): HourStat => {
 
 export const isEmptyHour = (h: HourStat): boolean => FIELDS.every((f) => h[f] === 0);
 
-/** Мягкое чтение документа: недостающие поля — нули. */
+/** Мягкое чтение документа: недостающие поля – нули. */
 export function parseHour(d: Record<string, unknown> | undefined): HourStat {
   const o = emptyHour();
   if (!d) return o;
@@ -56,12 +56,12 @@ export function keyDate(key: string): Date | null {
   return new Date(p[0], p[1] - 1, p[2], p[3]);
 }
 
-/** Итоги подсчёта с начала сессии — из них считается прирост за час. */
+/** Итоги подсчёта с начала сессии – из них считается прирост за час. */
 export type Totals = HourStat;
 
 /**
  * Прирост между двумя снимками итогов. Если счётчики уменьшились (сессию перезапустили),
- * прироста нет — новая база (как accountHour в iOS CameraView).
+ * прироста нет – новая база (как accountHour в iOS CameraView).
  */
 export function hourDelta(prev: Totals, cur: Totals): HourStat | null {
   for (const f of FIELDS) if (cur[f] < prev[f]) return null;
@@ -86,7 +86,7 @@ export class HourlyStore {
       const d = localStorage.getItem(storageKey + ".dirty");
       if (d) for (const k of JSON.parse(d) as string[]) this.dirty.add(k);
     } catch {
-      /* пусто — начнём заново */
+      /* пусто – начнём заново */
     }
   }
 
@@ -108,7 +108,7 @@ export class HourlyStore {
     this.emit();
   }
 
-  /** После входа: объединить с облаком (максимум по полям), всё объединённое — к отправке. */
+  /** После входа: объединить с облаком (максимум по полям), всё объединённое – к отправке. */
   merge(remote: Record<string, HourStat>): void {
     for (const [k, v] of Object.entries(remote)) {
       const local = this.hours[k];
@@ -121,7 +121,7 @@ export class HourlyStore {
     this.emit();
   }
 
-  /** Забрать изменённые часы для отправки. Если отправка не удалась — вернуть через markDirty. */
+  /** Забрать изменённые часы для отправки. Если отправка не удалась – вернуть через markDirty. */
   takeDirty(): Record<string, HourStat> {
     const out: Record<string, HourStat> = {};
     for (const k of this.dirty) if (this.hours[k]) out[k] = { ...this.hours[k] };
@@ -141,7 +141,7 @@ export class HourlyStore {
 
   save(): void {
     try {
-      // Другая вкладка могла записать свои часы — не затираем их (значения только растут, берём максимум)
+      // Другая вкладка могла записать свои часы – не затираем их (значения только растут, берём максимум)
       const raw = localStorage.getItem(this.storageKey);
       if (raw) {
         for (const [k, v] of Object.entries(JSON.parse(raw) as Record<string, Record<string, unknown>>)) {

@@ -1,6 +1,6 @@
-// Экран не гаснет, пока идёт работа (мониторинг, демо, подсчёт с камеры) — важно на планшете у витрины.
+// Экран не гаснет, пока идёт работа (мониторинг, демо, подсчёт с камеры) – важно на планшете у витрины.
 // Screen Wake Lock API (Chrome/Android, Safari 16.4+, Edge). Браузер снимает блокировку, когда вкладку
-// свернули, — при возвращении берём её снова. Где API нет (старый Safari), — запасной вариант: беззвучное
+// свернули, – при возвращении берём её снова. Где API нет (старый Safari), – запасной вариант: беззвучное
 // видео из холста, которое играет по кругу (так экран тоже не засыпает).
 
 type Sentinel = { released: boolean; release: () => Promise<void>; addEventListener: (t: "release", f: () => void) => void };
@@ -23,12 +23,12 @@ async function acquire(): Promise<void> {
       lock = await wl.request("screen");
       lock.addEventListener("release", () => {
         lock = null;
-        // отпустили не мы (например, свернули вкладку) — возьмём снова, когда станет видно
+        // отпустили не мы (например, свернули вкладку) – возьмём снова, когда станет видно
         if (want) setTimeout(() => void acquire(), 1000);
       });
       if (!want) await release();
     } catch {
-      // нет разрешения (не HTTPS, режим энергосбережения) — пробуем видео
+      // нет разрешения (не HTTPS, режим энергосбережения) – пробуем видео
       startFallback();
     } finally {
       pending = false;
@@ -56,14 +56,14 @@ function startFallback(): void {
     document.body.append(video);
     let k = 0;
     const timer = window.setInterval(() => {
-      ctx.fillStyle = k++ % 2 ? "#000" : "#010101"; // кадр меняется — видео «живое»
+      ctx.fillStyle = k++ % 2 ? "#000" : "#010101"; // кадр меняется – видео «живое»
       ctx.fillRect(0, 0, 2, 2);
       if (video.paused) void video.play().catch(() => undefined);
     }, 1000);
     void video.play().catch(() => undefined);
     fallback = { video, timer };
   } catch {
-    /* не вышло — экран будет гаснуть по настройкам устройства */
+    /* не вышло – экран будет гаснуть по настройкам устройства */
   }
 }
 
