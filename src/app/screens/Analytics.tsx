@@ -172,7 +172,7 @@ export function Analytics() {
               const fg = w.share === null ? "#98A2B3" : t > 0.5 ? "#FFFFFF" : "#14532D";
               return (
                 <div key={w.label} title={w.share !== null ? `${w.label}: в среднем ${num(w.people)} прохожих за день` : "нет данных"}>
-                  <div class="wd-cell" style={{ background: bg, color: fg }}>{w.share === null ? "–" : `${(w.share * 100).toFixed(w.share < 0.1 ? 1 : 0).replace(".", ",")}%`}</div>
+                  <div class="wd-cell" style={{ background: bg, color: fg }}>{w.share === null ? "–" : `${(w.share * 100).toFixed(1).replace(".", ",")}%`}</div>
                   <span>{w.label}</span>
                 </div>
               );
