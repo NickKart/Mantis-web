@@ -1,7 +1,6 @@
 // Каркас: боковое меню (как в макете), экраны, поиск ⌘K, профиль, сообщения.
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { agentAutostart, agentInfo, type AgentInfo } from "../desktop";
-import { friendlyError, resetPassword, signIn, signOut, signUp } from "../cloud/firebase";
+import { changeEmail, changePassword, friendlyError, resetPassword, signIn, signOut, signUp } from "../cloud/firebase";
 import { channelTitle } from "../multi/channel";
 import { listRecordings, type RecordingMeta } from "../twin/store";
 import { core } from "./core";
@@ -9,7 +8,7 @@ import { onboarding } from "./progress";
 import {
   IcAB, IcBurger, IcCam, IcClose, IcFunnel, IcLive, IcRec, IcSearch, IcStart, Logo,
 } from "./icons";
-import { AskHost, Modal, type Screen, Switch, Toasts, go, useCore, useRoute, useTick } from "./ui";
+import { AskHost, Modal, type Screen, Toasts, go, useCore, useRoute, useTick } from "./ui";
 import { Onboarding } from "./screens/Onboarding";
 import { Live } from "./screens/Live";
 import { Setup } from "./screens/Setup";
@@ -184,7 +183,7 @@ function Palette(p: { onClose: () => void; onProfile: () => void }) {
     list.push({ title: "Сравнить записи (A/B)", hint: "Дополнительная аналитика", run: () => go("compare", "rec") });
     list.push({ title: "Сравнить периоды", hint: "Дополнительная аналитика", run: () => go("compare", "period") });
     for (const r of recs) list.push({ title: r.name, hint: "Запись", run: () => go("records", r.id) });
-    list.push({ title: core.account.state.user ? "Профиль и точка" : "Войти или зарегистрироваться", hint: "Профиль", run: p.onProfile });
+    list.push({ title: core.account.state.user ? "Профиль" : "Войти или зарегистрироваться", hint: "Профиль", run: p.onProfile });
     return list;
   }, [recs]);
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -225,14 +224,17 @@ function Palette(p: { onClose: () => void; onProfile: () => void }) {
 function ProfileModal(p: { onClose: () => void }) {
   const c = useCore();
   const st = c.account.state;
+  return st.user
+    ? <AccountModal email={st.user.email ?? ""} onClose={p.onClose} />
+    : <SignInModal onClose={p.onClose} />;
+}
+
+function SignInModal(p: { onClose: () => void }) {
+  const c = useCore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [prof, setProf] = useState(st.profile);
-  const [agent, setAgent] = useState<AgentInfo | null>(null);
-  const [site, setSite] = useState(c.publisher.siteId === "main" ? "" : c.publisher.siteId);
-  useEffect(() => void agentInfo().then(setAgent), []);
 
   const act = async (fn: () => Promise<void>, ok?: string, needPassword = true) => {
     if (!email.includes("@")) return setErr("Введите почту");
@@ -248,109 +250,95 @@ function ProfileModal(p: { onClose: () => void }) {
       setBusy(false);
     }
   };
-  const numIn = (v: string, d: number) => {
-    const x = parseFloat(v.replace(",", "."));
-    return isFinite(x) && x >= 0 ? x : d;
-  };
-  const saveProfile = () => {
-    c.account.setProfile({
-      ...prof,
-      hoursPerDay: Math.min(24, Math.max(1, prof.hoursPerDay)),
-      lookToBuy: Math.min(100, prof.lookToBuy),
-      enterToBuy: Math.min(100, prof.enterToBuy),
-    });
-    if ((site.trim() || "main") !== c.publisher.siteId) c.publisher.siteId = site;
-    c.toast("Профиль точки сохранён");
-    p.onClose();
-  };
 
   return (
-    <Modal title={st.user ? "Профиль и точка" : "Вход в Mantis"} onClose={p.onClose} wide={!!st.user}>
-      {!st.user && (
-        <>
-          <p class="lead">Тот же аккаунт, что в приложении для iPhone и Mac. Без входа всё работает, но статистика остаётся только в этом браузере.</p>
-          <div class="field"><label for="pf-email">Почта</label>
-            <input id="pf-email" class="input" type="email" autoComplete="email" value={email} onInput={(e) => setEmail((e.target as HTMLInputElement).value)} /></div>
-          <div class="field"><label for="pf-pass">Пароль</label>
-            <input id="pf-pass" class="input" type="password" autoComplete="current-password" value={password}
-              onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
-              onKeyDown={(e) => e.key === "Enter" && void act(() => signIn(email, password))} /></div>
-          {err && <p class="error-text">{err}</p>}
-          <div class="modal-actions" style={{ justifyContent: "space-between" }}>
-            <button class="btn ghost" disabled={busy} onClick={() => void act(() => resetPassword(email), "Письмо для смены пароля отправлено", false)}>Забыли пароль?</button>
-            <span style={{ display: "flex", gap: "10px" }}>
-              <button class="btn lg" disabled={busy} onClick={() => void act(() => signUp(email, password), "Аккаунт создан")}>Регистрация</button>
-              <button class="btn lg primary" disabled={busy} onClick={() => void act(() => signIn(email, password))}>Войти</button>
-            </span>
-          </div>
-        </>
-      )}
-      {st.user && (
-        <>
-          <div class="card-head center">
-            <span class="s13">Вы вошли как <b>{st.user.email}</b></span>
-            <button class="btn right" onClick={async () => {
-              if (c.pilot.running) return c.toast("Сначала остановите подсчёт", true);
-              await signOut();
-              c.toast("Вы вышли. Статистика этого браузера осталась на нём.");
-              p.onClose();
-            }}>Выйти</button>
-          </div>
-          <div class="divider" />
-          <h3 class="s13" style={{ fontWeight: 600, fontSize: "14px" }}>Точка</h3>
-          <div class="form-grid">
-            <Field label="Название точки" value={prof.point} onInput={(v) => setProf({ ...prof, point: v })} />
-            <Field label="Город" value={prof.city} onInput={(v) => setProf({ ...prof, city: v })} />
-            <Field label="Средний чек, ₽" value={String(prof.avgCheck)} onInput={(v) => setProf({ ...prof, avgCheck: numIn(v, prof.avgCheck) })} num />
-            <Field label="Часов работы в день" value={String(prof.hoursPerDay)} onInput={(v) => setProf({ ...prof, hoursPerDay: numIn(v, prof.hoursPerDay) })} num />
-            <Field label="Из зашедших покупают, %" value={String(prof.enterToBuy)} onInput={(v) => setProf({ ...prof, enterToBuy: numIn(v, prof.enterToBuy) })} num />
-            <Field label="Из посмотревших покупают, %" value={String(prof.lookToBuy)} onInput={(v) => setProf({ ...prof, lookToBuy: numIn(v, prof.lookToBuy) })} num />
-          </div>
-          <div class="divider" />
-          <div class="card-head center">
-            <div style={{ display: "flex", flexDirection: "column", gap: "2px", flex: "1 1 260px" }}>
-              <b style={{ fontSize: "14px", fontWeight: 600 }}>Личный кабинет и план в облаке</b>
-              <span class="small muted">Люди на плане и счётчики уходят в личный кабинет раз в секунду. Видео не передаётся.</span>
-            </div>
-            <Switch on={c.publisher.enabled} label="Передавать в личный кабинет" onChange={(v) => { c.publisher.enabled = v; c.emit(); }} />
-          </div>
-          <Field label="Код точки (если магазинов несколько – на каждом свой)" value={site} placeholder="main" onInput={setSite} />
-          {agent && (
-            <>
-              <div class="divider" />
-              <div class="card-head center">
-                <div style={{ display: "flex", flexDirection: "column", gap: "2px", flex: "1 1 260px" }}>
-                  <b style={{ fontSize: "14px", fontWeight: 600 }}>Mantis Агент {agent.version}</b>
-                  <span class="small muted">Запускать при входе в систему – подсчёт продолжится сам после перезагрузки компьютера.</span>
-                </div>
-                <Switch on={agent.autostart} label="Автозапуск агента" onChange={async (v) => {
-                  try {
-                    const on = await agentAutostart(v);
-                    setAgent({ ...agent, autostart: on });
-                  } catch (e) {
-                    c.toast(`Автозапуск: ${(e as Error).message}`, true);
-                  }
-                }} />
-              </div>
-            </>
-          )}
-          <div class="modal-actions">
-            <button class="btn lg" onClick={p.onClose}>Отмена</button>
-            <button class="btn lg primary" onClick={saveProfile}>Сохранить</button>
-          </div>
-        </>
-      )}
+    <Modal title="Вход в Mantis" onClose={p.onClose}>
+      <p class="lead">Тот же аккаунт, что в приложении для iPhone и Mac. Без входа всё работает, но статистика остаётся только в этом браузере.</p>
+      <div class="field"><label for="pf-email">Почта</label>
+        <input id="pf-email" class="input" type="email" autoComplete="email" value={email} onInput={(e) => setEmail((e.target as HTMLInputElement).value)} /></div>
+      <div class="field"><label for="pf-pass">Пароль</label>
+        <input id="pf-pass" class="input" type="password" autoComplete="current-password" value={password}
+          onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
+          onKeyDown={(e) => e.key === "Enter" && void act(() => signIn(email, password))} /></div>
+      {err && <p class="error-text">{err}</p>}
+      <div class="modal-actions" style={{ justifyContent: "space-between" }}>
+        <button class="btn ghost" disabled={busy} onClick={() => void act(() => resetPassword(email), "Письмо для смены пароля отправлено", false)}>Забыли пароль?</button>
+        <span style={{ display: "flex", gap: "10px" }}>
+          <button class="btn lg" disabled={busy} onClick={() => void act(() => signUp(email, password), "Аккаунт создан")}>Регистрация</button>
+          <button class="btn lg primary" disabled={busy} onClick={() => void act(() => signIn(email, password))}>Войти</button>
+        </span>
+      </div>
     </Modal>
   );
 }
 
-function Field(p: { label: string; value: string; onInput: (v: string) => void; num?: boolean; placeholder?: string }) {
-  const id = `f-${Array.from(p.label).reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 7).toString(36)}`;
+/** Профиль вошедшего: только почта и пароль, оба можно сменить. */
+function AccountModal(p: { email: string; onClose: () => void }) {
+  const c = useCore();
+  const [email, setEmail] = useState(p.email);
+  const [password, setPassword] = useState("");
+  const [current, setCurrent] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const emailChanged = email.trim().toLowerCase() !== p.email.toLowerCase();
+  const passChanged = password.length > 0;
+  const dirty = emailChanged || passChanged;
+
+  const save = async () => {
+    if (!dirty) return p.onClose();
+    if (emailChanged && !email.includes("@")) return setErr("Введите почту");
+    if (passChanged && password.length < 6) return setErr("Новый пароль – минимум 6 символов");
+    if (!current) return setErr("Введите текущий пароль");
+    setErr(null);
+    setBusy(true);
+    try {
+      if (passChanged) await changePassword(password, current);
+      if (emailChanged) await changeEmail(email, current);
+      c.toast(
+        emailChanged
+          ? `Письмо отправлено на ${email.trim()} – почта сменится после перехода по ссылке`
+          : "Пароль изменён",
+      );
+      p.onClose();
+    } catch (e) {
+      setErr(friendlyError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <div class="field">
-      <label for={id}>{p.label}</label>
-      <input id={id} class="input" value={p.value} placeholder={p.placeholder} inputMode={p.num ? "decimal" : undefined}
-        onInput={(e) => p.onInput((e.target as HTMLInputElement).value)} />
-    </div>
+    <Modal title="Профиль" onClose={p.onClose}>
+      <div class="field"><label for="ac-email">Электронная почта</label>
+        <input id="ac-email" class="input" type="email" autoComplete="email" value={email}
+          onInput={(e) => setEmail((e.target as HTMLInputElement).value)} />
+        {emailChanged && <span class="small muted">На новый адрес придёт письмо со ссылкой. После перехода по ней войдите с новой почтой.</span>}
+      </div>
+      <div class="field"><label for="ac-pass">Пароль</label>
+        <input id="ac-pass" class="input" type="password" autoComplete="new-password" placeholder="••••••••" value={password}
+          onInput={(e) => setPassword((e.target as HTMLInputElement).value)} />
+        {passChanged && <span class="small muted">Новый пароль, минимум 6 символов</span>}
+      </div>
+      {dirty && (
+        <div class="field"><label for="ac-current">Текущий пароль – для подтверждения</label>
+          <input id="ac-current" class="input" type="password" autoComplete="current-password" value={current}
+            onInput={(e) => setCurrent((e.target as HTMLInputElement).value)}
+            onKeyDown={(e) => e.key === "Enter" && void save()} /></div>
+      )}
+      {err && <p class="error-text">{err}</p>}
+      <div class="modal-actions" style={{ justifyContent: "space-between" }}>
+        <button class="btn ghost" disabled={busy} onClick={async () => {
+          if (c.pilot.running) return c.toast("Сначала остановите подсчёт", true);
+          await signOut();
+          c.toast("Вы вышли. Статистика этого браузера осталась на нём.");
+          p.onClose();
+        }}>Выйти</button>
+        <span style={{ display: "flex", gap: "10px" }}>
+          <button class="btn lg" disabled={busy} onClick={p.onClose}>Отмена</button>
+          <button class="btn lg primary" disabled={busy || !dirty} onClick={() => void save()}>Сохранить</button>
+        </span>
+      </div>
+    </Modal>
   );
 }

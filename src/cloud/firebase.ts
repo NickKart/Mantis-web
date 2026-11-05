@@ -7,8 +7,9 @@
 
 import { type FirebaseApp, initializeApp } from "firebase/app";
 import {
-  type Auth, type User, createUserWithEmailAndPassword, getAuth, onAuthStateChanged, sendPasswordResetEmail,
-  signInWithEmailAndPassword, signOut as fbSignOut,
+  type Auth, type User, EmailAuthProvider, createUserWithEmailAndPassword, getAuth, onAuthStateChanged,
+  reauthenticateWithCredential, sendPasswordResetEmail, signInWithEmailAndPassword, signOut as fbSignOut,
+  updatePassword, verifyBeforeUpdateEmail,
 } from "firebase/auth";
 import {
   type Firestore, collection, doc, getDoc, getDocs, initializeFirestore, persistentLocalCache,
@@ -110,6 +111,9 @@ export function friendlyError(e: unknown): string {
     "auth/weak-password": "Пароль слишком простой – минимум 6 символов",
     "auth/too-many-requests": "Слишком много попыток, попробуйте позже",
     "auth/network-request-failed": "Нет связи с интернетом",
+    "auth/requires-recent-login": "Войдите заново и повторите",
+    "auth/missing-password": "Введите текущий пароль",
+    "auth/user-mismatch": "Неверный текущий пароль",
     "auth/unauthorized-domain": "Этот адрес сайта не разрешён в Firebase (Authentication → Settings → Authorized domains)",
     "permission-denied": "Нет доступа к данным: проверьте правила Firestore",
     unavailable: "Нет связи с сервером",
@@ -127,6 +131,25 @@ export async function signUp(email: string, password: string): Promise<void> {
 
 export async function resetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(init().auth, email.trim());
+}
+
+/** Подтвердить текущий пароль перед сменой почты или пароля (Firebase требует недавний вход). */
+async function reauth(currentPassword: string): Promise<User> {
+  const user = init().auth.currentUser;
+  if (!user?.email) throw new Error("Сначала войдите");
+  await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, currentPassword));
+  return user;
+}
+
+/** Сменить почту: на новый адрес уходит письмо, почта меняется после перехода по ссылке. */
+export async function changeEmail(newEmail: string, currentPassword: string): Promise<void> {
+  const user = await reauth(currentPassword);
+  await verifyBeforeUpdateEmail(user, newEmail.trim());
+}
+
+export async function changePassword(newPassword: string, currentPassword: string): Promise<void> {
+  const user = await reauth(currentPassword);
+  await updatePassword(user, newPassword);
 }
 
 export async function signOut(): Promise<void> {
