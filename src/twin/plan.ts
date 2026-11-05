@@ -581,7 +581,12 @@ export interface TwinPerson {
   cameras: number;
   /** Скорость по плану, м/с. */
   speed: number | null;
+  /** Отметки: 1 — вернулся к витрине, 2 — зашёл в магазин (битами). */
+  flags?: number;
 }
+
+export const FLAG_RETURNED = 1;
+export const FLAG_ENTERED = 2;
 
 /** Скорость по точкам (время, место) за последнюю ~секунду. */
 export function speedOf(samples: { t: number; p: Pt }[]): number | null {
@@ -607,6 +612,8 @@ export interface RecPerson {
   y: number;
   /** 0 — идёт, 1 — прошёл, 2 — притормозил, 3 — смотрит. */
   s: number;
+  /** Отметки (FLAG_RETURNED, FLAG_ENTERED); нет — 0. */
+  f?: number;
 }
 export interface RecFrame {
   t: number;
@@ -621,10 +628,12 @@ export interface RecordingData {
   plan: TwinPlan;
   cameras: RecCameraRef[];
   frames: RecFrame[];
+  /** Счётчики по ходу записи: [t, прошли мимо, притормозили, посмотрели, вернулись, зашли] — с начала записи. */
+  counts?: number[][];
 }
 
 export const recPerson = (p: TwinPerson): RecPerson => ({
-  i: p.id, x: Math.round(p.pos.x * 100) / 100, y: Math.round(p.pos.y * 100) / 100, s: STATE_CODE[p.state],
+  i: p.id, x: Math.round(p.pos.x * 100) / 100, y: Math.round(p.pos.y * 100) / 100, s: STATE_CODE[p.state], ...(p.flags ? { f: p.flags } : {}),
 });
 
 /** Люди на плане по времени: тепло, заходы в зоны, пики (для записи и для видео). */
@@ -712,7 +721,7 @@ export class Timeline {
     }
     return this.points[i].map((p) => {
       const tr = (trails.get(p.i) ?? []).reverse();
-      return { id: p.i, pos: P(p.x, p.y), trail: tr.map((x) => x.p), state: CODE_STATE[p.s] ?? "tracked", cameras: 1, speed: speedOf(tr) };
+      return { id: p.i, pos: P(p.x, p.y), trail: tr.map((x) => x.p), state: CODE_STATE[p.s] ?? "tracked", cameras: 1, speed: speedOf(tr), ...(p.f ? { flags: p.f } : {}) };
     });
   }
 

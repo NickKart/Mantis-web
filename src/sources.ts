@@ -219,3 +219,10 @@ export function saveIpCamera(c: IpCameraConfig | null): void {
     /* нет */
   }
 }
+
+/** Камеры компьютера (встроенная, USB). Названия видны после разрешения на камеру. */
+export async function listCameras(): Promise<MediaDeviceInfo[]> {
+  if (!navigator.mediaDevices?.enumerateDevices) return [];
+  const all = await navigator.mediaDevices.enumerateDevices();
+  return all.filter((d) => d.kind === "videoinput");
+}

@@ -18,6 +18,18 @@ export interface OverlayBox {
   speed: number | null;
   inZone: boolean;
   keypoints: RawDetection["keypoints"] | null;
+  /** Зашёл в магазин (пересёк линию входа). */
+  entered?: boolean;
+  /** Вернулся к витрине: прошёл мимо, развернулся и пришёл обратно. */
+  returned?: boolean;
+}
+
+/** Движение человека для метрики «Вернулись»: откуда пошёл, куда, как далеко ушёл вперёд. */
+interface ReturnTrack {
+  origin: Pt;
+  dir: Pt | null;
+  maxProgress: number;
+  returned: boolean;
 }
 
 export interface FrameResult {
@@ -26,6 +38,7 @@ export interface FrameResult {
   boxes: OverlayBox[];
   counters: Counters;
   entered: number;
+  returned: number;
 }
 
 export interface SessionReport {
@@ -35,6 +48,7 @@ export interface SessionReport {
   frames: number;
   counters: Counters;
   entered: number | null;
+  returned: number;
   events: AnalyticsEvent[];
   tracks: TrackSummary[];
   metrics: ExtendedMetrics;
@@ -54,6 +68,9 @@ export class Session {
   seen = 0;
   /** Сколько вошло в магазин (живой счётчик). */
   enteredCount = 0;
+  /** Сколько вернулось к витрине (прошли мимо, развернулись и вернулись). */
+  returnedCount = 0;
+  private readonly returnTracks = new Map<number, ReturnTrack>();
   private maxSimultaneous = 0;
   private frames = 0;
   private firstT: number | null = null;
@@ -109,12 +126,34 @@ export class Session {
         events.push({ t, trackId: p.trackId, kind: "entered", direction: "" });
       }
 
+      // Вернулись: ушёл вперёд дальше порога, развернулся, прошёл назад не меньше порога и снова у витрины
+      const rt = this.returnTracks.get(p.trackId) ?? { origin: foot, dir: null, maxProgress: 0, returned: false };
+      this.returnTracks.set(p.trackId, rt);
+      const step = Math.max(this.width * 0.05, heightOf(p.box) * 0.5);
+      if (!rt.dir) {
+        const dx = foot.x - rt.origin.x, dy = foot.y - rt.origin.y;
+        const d = Math.hypot(dx, dy);
+        if (d > step) rt.dir = { x: dx / d, y: dy / d };
+      }
+      if (rt.dir && !rt.returned) {
+        const progress = (foot.x - rt.origin.x) * rt.dir.x + (foot.y - rt.origin.y) * rt.dir.y;
+        if (progress > rt.maxProgress) rt.maxProgress = progress;
+        else if (rt.maxProgress > step * 1.5 && rt.maxProgress - progress > step && tr.inZone) {
+          rt.returned = true;
+          this.returnedCount += 1;
+          events.push({ t, trackId: p.trackId, kind: "returned", direction: "" });
+        }
+      }
+
       const state: PersonState = tr.looked ? "looked" : tr.slowed ? "slowed" : tr.passed ? "passed" : "tracked";
-      boxes.push({ trackId: p.trackId, box: p.box, state, lookingNow: tr.lookingNow, speed: tr.speed, inZone: tr.inZone, keypoints: p.keypoints });
+      boxes.push({
+        trackId: p.trackId, box: p.box, state, lookingNow: tr.lookingNow, speed: tr.speed, inZone: tr.inZone, keypoints: p.keypoints,
+        entered: this.enteredIds.has(p.trackId), returned: rt.returned,
+      });
     }
     this.maxSimultaneous = Math.max(this.maxSimultaneous, inZoneNow);
     this.events.push(...events);
-    return { t, events, boxes, counters: { ...this.analytics.counters }, entered: this.enteredCount };
+    return { t, events, boxes, counters: { ...this.analytics.counters }, entered: this.enteredCount, returned: this.returnedCount };
   }
 
   /**
@@ -128,6 +167,7 @@ export class Session {
         this.trajectories.delete(id);
         this.enteredIds.delete(id);
         this.seenIds.delete(id);
+        this.returnTracks.delete(id);
       } else if (traj.length > 600) {
         traj.splice(0, traj.length - 600);
       }
@@ -150,6 +190,7 @@ export class Session {
       frames: this.frames,
       counters: { ...this.analytics.counters },
       entered: metrics.entered,
+      returned: this.returnedCount,
       events: [...this.events],
       tracks: [...this.analytics.finished],
       metrics,

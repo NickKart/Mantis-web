@@ -18,7 +18,7 @@ export interface TrackedPerson {
 export const footOf = (b: Box): Pt => ({ x: (b.x1 + b.x2) / 2, y: b.y2 });
 export const heightOf = (b: Box): number => Math.max(1, b.y2 - b.y1);
 
-export type EventKind = "passed" | "slowed" | "looked" | "entered";
+export type EventKind = "passed" | "slowed" | "looked" | "entered" | "returned";
 
 export interface AnalyticsEvent {
   t: number;

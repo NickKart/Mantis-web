@@ -5,7 +5,7 @@ import type { Pt } from "../engine/geometry";
 import type { PersonState } from "../engine/session";
 import {
   type CameraMark, FIXTURE_KINDS, STAND_W, type TwinFixture, fixtureCorners, type TwinDayStats, type TwinPerson, type TwinPlan, type TwinZone, cameraColor, doorLines, fmt1,
-  hasShop, nearestFixture, ray, rayInside, rayLength, showcaseLines, standCorners, standFacing, walls, zoneCentroid, zoneColor,
+  FLAG_ENTERED, FLAG_RETURNED, hasShop, nearestFixture, ray, rayInside, rayLength, showcaseLines, standCorners, standFacing, walls, zoneCentroid, zoneColor,
 } from "./plan";
 
 export const C = {
@@ -24,6 +24,51 @@ export const C = {
  *  притормозил — системный зелёный, смотрит — системный жёлтый. Одинаково на телефоне, в вебе и в кабинете. */
 export const PERSON_COLORS: Record<PersonState, string> = { tracked: "#8fa6ff", passed: "#ffffff", slowed: "#30d158", looked: "#ffd60a" };
 export const personColor = (s: PersonState) => PERSON_COLORS[s] ?? PERSON_COLORS.tracked;
+/** Цвета отметок «вернулся» и «зашёл» — поверх цвета состояния. */
+export const FLAG_COLORS = { returned: "#ff9f40", entered: "#7cf2c8" };
+/** Цвет человека на плане с учётом отметок. */
+export const personFill = (p: Pick<TwinPerson, "state" | "flags">): string =>
+  (p.flags ?? 0) & FLAG_ENTERED ? FLAG_COLORS.entered : (p.flags ?? 0) & FLAG_RETURNED ? FLAG_COLORS.returned : personColor(p.state);
+
+/** Оттенки плана, которых нет в C. По умолчанию — тёмная тема (кабинет); светлая — новый интерфейс. */
+export const T = {
+  font: '"Onest Variable", system-ui, sans-serif',
+  planFill: "rgba(10, 18, 48, 0.85)",
+  gridMinor: "rgba(232, 238, 248, 0.06)",
+  gridMajor: "rgba(232, 238, 248, 0.14)",
+  planStroke: "rgba(232, 238, 248, 0.35)",
+  dimBg: "rgba(10, 18, 48, 0.85)",
+  shopFill: "rgba(46, 63, 122, 0.35)",
+  wall: "rgba(232, 238, 248, 0.75)",
+  shopLabel: "rgba(232, 238, 248, 0.55)",
+  tagInk: "#000",
+  zoneInk: "#000",
+  showcaseGlow: "rgba(115, 217, 255, 0.35)",
+  showcaseCore: "rgba(255,255,255,0.85)",
+  standFill: "rgba(255, 158, 64, 0.55)",
+  guide: "rgba(255,255,255,0.75)",
+  guideDot: "#fff",
+  halo: "rgba(8,14,40,0.85)",
+  personStroke: "rgba(255,255,255,0.9)",
+  multiRing: "rgba(255,255,255,0.6)",
+};
+
+/** Светлая тема плана — как в макете нового интерфейса. Вызывается один раз при старте приложения. */
+export function applyLightPlanTheme(): void {
+  Object.assign(C, {
+    bg: "#F4F6FA", panel: "#FFFFFF", moon: "#1F2937", dim: "#5E6A7D", focus: "#4A9BD8",
+    stand: "#D97706", rack: "#A16207", showcase: "#4A9BD8", entrance: "#F97316",
+  });
+  Object.assign(T, {
+    font: '"Inter Variable", Inter, system-ui, sans-serif',
+    planFill: "#F8FAFC", gridMinor: "rgba(31, 41, 55, 0.05)", gridMajor: "rgba(31, 41, 55, 0.1)", planStroke: "rgba(31, 41, 55, 0.22)",
+    dimBg: "rgba(255, 255, 255, 0.94)", shopFill: "#FFFFFF", wall: "#1F2937", shopLabel: "#5E6A7D", tagInk: "#FFFFFF", zoneInk: "#FFFFFF",
+    showcaseGlow: "rgba(74, 155, 216, 0.22)", showcaseCore: "rgba(255,255,255,0.9)", standFill: "rgba(217, 119, 6, 0.35)",
+    guide: "rgba(31, 41, 55, 0.5)", guideDot: "#1F2937", halo: "rgba(255,255,255,0.92)", personStroke: "#FFFFFF", multiRing: "rgba(31, 41, 55, 0.45)",
+  });
+  Object.assign(PERSON_COLORS, { tracked: "#C3CAD5", passed: "#98A2B3", slowed: "#9CCDF0", looked: "#4A9BD8" });
+  Object.assign(FLAG_COLORS, { returned: "#EA580C", entered: "#1E4A73" });
+}
 
 /** Геометрия плана на экране: прямоугольник плана и точек на метр. */
 export class PlanFrame {
@@ -71,7 +116,7 @@ export function fitCanvas(c: HTMLCanvasElement): { ctx: CanvasRenderingContext2D
 }
 
 const font = (px: number, weight = 600, mono = false) =>
-  `${weight} ${px}px ${mono ? '"JetBrains Mono", ui-monospace, monospace' : '"Onest Variable", system-ui, sans-serif'}`;
+  `${weight} ${px}px ${mono ? '"JetBrains Mono", ui-monospace, monospace' : T.font}`;
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
   ctx.beginPath();
@@ -93,11 +138,11 @@ export function tag(ctx: CanvasRenderingContext2D, text: string, x: number, y: n
 
 /** Подпись размера на тёмной плашке. */
 export const dimLabel = (ctx: CanvasRenderingContext2D, text: string, x: number, y: number, color: string) =>
-  tag(ctx, text, x, y, "rgba(10, 18, 48, 0.85)", color, 10, true);
+  tag(ctx, text, x, y, T.dimBg, color, 10, true);
 
 export function paintBase(ctx: CanvasRenderingContext2D, plan: TwinPlan, f: PlanFrame, bg: ImageBitmap | null): void {
   roundRect(ctx, f.x, f.y, f.w, f.h, 4);
-  ctx.fillStyle = "rgba(10, 18, 48, 0.85)";
+  ctx.fillStyle = T.planFill;
   ctx.fill();
   if (bg) {
     ctx.save();
@@ -119,12 +164,12 @@ export function paintBase(ctx: CanvasRenderingContext2D, plan: TwinPlan, f: Plan
         ctx.moveTo(...f.pt({ x: 0, y }));
         ctx.lineTo(...f.pt({ x: plan.widthM, y }));
       }
-      ctx.strokeStyle = major ? "rgba(232, 238, 248, 0.14)" : "rgba(232, 238, 248, 0.06)";
+      ctx.strokeStyle = major ? T.gridMajor : T.gridMinor;
       ctx.stroke();
     }
   }
   roundRect(ctx, f.x, f.y, f.w, f.h, 4);
-  ctx.strokeStyle = "rgba(232, 238, 248, 0.35)";
+  ctx.strokeStyle = T.planStroke;
   ctx.lineWidth = 1.5;
   ctx.stroke();
   // подписи метров
@@ -187,7 +232,7 @@ export function paintZones(ctx: CanvasRenderingContext2D, zones: TwinZone[], f: 
     ctx.globalAlpha = 0.92;
     ctx.fill();
     ctx.globalAlpha = 1;
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = T.zoneInk;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(label, cx, cy + 0.5);
@@ -198,27 +243,27 @@ export function paintZones(ctx: CanvasRenderingContext2D, zones: TwinZone[], f: 
 export function paintFixtures(ctx: CanvasRenderingContext2D, plan: TwinPlan, f: PlanFrame): void {
   if (hasShop(plan)) {
     f.path(ctx, plan.shop);
-    ctx.fillStyle = "rgba(46, 63, 122, 0.35)";
+    ctx.fillStyle = T.shopFill;
     ctx.fill();
     ctx.beginPath();
     for (const [a, b] of walls(plan)) {
       ctx.moveTo(...f.pt(a));
       ctx.lineTo(...f.pt(b));
     }
-    ctx.strokeStyle = "rgba(232, 238, 248, 0.75)";
+    ctx.strokeStyle = T.wall;
     ctx.lineWidth = 4;
     ctx.lineCap = "square";
     ctx.stroke();
     ctx.lineCap = "butt";
     const xs = plan.shop.map((q) => q.x), ys = plan.shop.map((q) => q.y);
     ctx.font = font(10, 800);
-    ctx.fillStyle = "rgba(232, 238, 248, 0.55)";
+    ctx.fillStyle = T.shopLabel;
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillText("МАГАЗИН", ...f.pt({ x: Math.min(...xs) + 0.25, y: Math.min(...ys) + 0.25 }));
     for (const l of showcaseLines(plan)) {
       const a = f.pt(l[0]), b = f.pt(l[1]);
-      for (const [w, c] of [[14, "rgba(115, 217, 255, 0.35)"], [6, C.showcase], [1.2, "rgba(255,255,255,0.85)"]] as const) {
+      for (const [w, c] of [[14, T.showcaseGlow], [6, C.showcase], [1.2, T.showcaseCore]] as const) {
         ctx.beginPath();
         ctx.moveTo(...a);
         ctx.lineTo(...b);
@@ -226,7 +271,7 @@ export function paintFixtures(ctx: CanvasRenderingContext2D, plan: TwinPlan, f: 
         ctx.lineWidth = w;
         ctx.stroke();
       }
-      tag(ctx, "ВИТРИНА", (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, C.showcase, "#000", 9.5);
+      tag(ctx, "ВИТРИНА", (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, C.showcase, T.tagInk, 9.5);
     }
     for (const l of doorLines(plan)) {
       const a = f.pt(l[0]), b = f.pt(l[1]);
@@ -236,13 +281,13 @@ export function paintFixtures(ctx: CanvasRenderingContext2D, plan: TwinPlan, f: 
       ctx.strokeStyle = C.entrance;
       ctx.lineWidth = 6;
       ctx.stroke();
-      tag(ctx, "ВХОД", (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, C.entrance, "#000", 9.5);
+      tag(ctx, "ВХОД", (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, C.entrance, T.tagInk, 9.5);
     }
   }
   for (const st of plan.stands) {
     const c = standCorners(st);
     f.path(ctx, c);
-    ctx.fillStyle = "rgba(255, 158, 64, 0.55)";
+    ctx.fillStyle = T.standFill;
     ctx.fill();
     ctx.strokeStyle = C.stand;
     ctx.lineWidth = 1.2;
@@ -382,17 +427,17 @@ export function paintCamera(ctx: CanvasRenderingContext2D, cam: CameraMark, f: P
       ctx.beginPath();
       ctx.moveTo(px, py);
       ctx.lineTo(bx, by);
-      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.strokeStyle = T.guide;
       ctx.lineWidth = 1;
       ctx.stroke();
       ctx.setLineDash([]);
       for (const [ex, ey] of [[px, py], [bx, by]]) {
         ctx.beginPath();
         ctx.arc(ex, ey, 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = "#fff";
+        ctx.fillStyle = T.guideDot;
         ctx.fill();
       }
-      dimLabel(ctx, `${fmt1(nf[1])} м`, (px + bx) / 2, (py + by) / 2, "#fff");
+      dimLabel(ctx, `${fmt1(nf[1])} м`, (px + bx) / 2, (py + by) / 2, T.guideDot);
     }
   }
   // значок
@@ -423,7 +468,7 @@ export function paintCamera(ctx: CanvasRenderingContext2D, cam: CameraMark, f: P
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   ctx.lineWidth = 3;
-  ctx.strokeStyle = "rgba(8,14,40,0.85)";
+  ctx.strokeStyle = T.halo;
   ctx.lineJoin = "round";
   ctx.strokeText(cam.name, px, py + 22);
   ctx.fillText(cam.name, px, py + 22);
@@ -465,7 +510,7 @@ export function paintPlan(
     for (const p of people) {
       const n = p.trail.length;
       if (n < 2) continue;
-      ctx.strokeStyle = personColor(p.state);
+      ctx.strokeStyle = personFill(p);
       for (let i = 1; i < n; i++) {
         ctx.globalAlpha = 0.08 + (0.55 * i) / n;
         ctx.beginPath();
@@ -480,7 +525,7 @@ export function paintPlan(
   const r = Math.max(5.5, Math.min(10, f.k * 0.22));
   for (const p of people) {
     const [cx, cy] = f.pt(p.pos);
-    const color = personColor(p.state);
+    const color = personFill(p);
     ctx.beginPath();
     ctx.arc(cx, cy, r * 2, 0, Math.PI * 2);
     ctx.globalAlpha = 0.14;
@@ -490,14 +535,14 @@ export function paintPlan(
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.strokeStyle = T.personStroke;
     ctx.lineWidth = 1.5;
     ctx.stroke();
     if (p.cameras > 1) {
       ctx.setLineDash([2, 2]);
       ctx.beginPath();
       ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(255,255,255,0.6)";
+      ctx.strokeStyle = T.multiRing;
       ctx.lineWidth = 1;
       ctx.stroke();
       ctx.setLineDash([]);

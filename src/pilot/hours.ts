@@ -7,13 +7,15 @@ export interface HourStat {
   slowed: number;
   passed: number;
   entered: number;
+  /** Вернулись к витрине (только веб; iOS это поле пока не пишет и не читает). */
+  returned: number;
   /** Сколько секунд в этом часе шёл подсчёт. */
   seconds: number;
 }
 
-export const emptyHour = (): HourStat => ({ people: 0, looked: 0, slowed: 0, passed: 0, entered: 0, seconds: 0 });
+export const emptyHour = (): HourStat => ({ people: 0, looked: 0, slowed: 0, passed: 0, entered: 0, returned: 0, seconds: 0 });
 
-const FIELDS = ["people", "looked", "slowed", "passed", "entered", "seconds"] as const;
+const FIELDS = ["people", "looked", "slowed", "passed", "entered", "returned", "seconds"] as const;
 
 export const addHours = (a: HourStat, b: HourStat): HourStat => {
   const o = emptyHour();

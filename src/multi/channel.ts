@@ -346,6 +346,7 @@ export class Channel {
       slowed: this.base.slowed + (c?.slowed ?? 0),
       passed: this.base.passed + (c?.passed ?? 0),
       entered: this.base.entered + (s?.enteredCount ?? 0),
+      returned: this.base.returned + (s?.returnedCount ?? 0),
       seconds: 0,
     };
   }

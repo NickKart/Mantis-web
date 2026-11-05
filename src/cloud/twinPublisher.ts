@@ -26,11 +26,10 @@ import { type MultiPilot, desktopDeviceId } from "../multi/model";
 import { channelColorIndex, channelLabel, channelShort } from "../multi/channel";
 import type { HourStat } from "../pilot/hours";
 import {
-  FIXTURE_KINDS, STATE_CODE, type TwinPlan, cameraColor, cameraMark, hasShop, insideShop, normalizePlan, spanPoints, zoneColor,
+  FIXTURE_KINDS, STATE_CODE, type TwinPerson, type TwinPlan, cameraColor, cameraMark, hasShop, insideShop, normalizePlan, spanPoints, zoneColor,
 } from "../twin/plan";
 import type { TwinModel } from "../twin/model";
 import type { Account } from "./account";
-import type { DemoSnapshot } from "../demo";
 import { firestore, friendlyError } from "./firebase";
 
 export { TWIN_DB_URL } from "./rtdb";
@@ -66,7 +65,15 @@ export const safeKey = (s: string) => s.replace(/[.#$[\]/]/g, "_");
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const r2 = (v: number) => Math.round(v * 100) / 100;
 const r3 = (v: number) => Math.round(v * 1000) / 1000;
-const statDict = (h: HourStat) => ({ people: h.people, slowed: h.slowed, looked: h.looked, entered: h.entered, turned: 0 });
+const statDict = (h: HourStat) => ({ people: h.people, slowed: h.slowed, looked: h.looked, entered: h.entered, turned: h.returned ?? 0 });
+
+/** Демо (синтетические прохожие) — уходит в облако вместо живых данных, как с iPhone. */
+export interface DemoSnapshot {
+  plan: TwinPlan;
+  people: TwinPerson[];
+  cameras: { id: string; name: string; inFrame: number }[];
+  counts: { passed: number; slowed: number; looked: number; entered: number };
+}
 
 export class TwinPublisher {
   state: TwinCloudState = { kind: "off" };

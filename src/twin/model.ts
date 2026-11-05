@@ -5,7 +5,7 @@
 import { type Pt, pointInPolygon } from "../engine/geometry";
 import type { OverlayBox, PersonState } from "../engine/session";
 import {
-  CameraProjector, type CameraCalibration, type RecCameraRef, type RecFrame, type RecordingData, STATE_RANK, type TwinDayStats,
+  CameraProjector, type CameraCalibration, FLAG_ENTERED, FLAG_RETURNED, type RecCameraRef, type RecFrame, type RecordingData, STATE_RANK, type TwinDayStats,
   type TwinPerson, type TwinPlan, clearPath, dayKey, defaultPlan, hasShop, heatIndex, insideShop,
   nearestWall, newDayStats, normalizePlan, obstacles, outwardNormal, planCell, planCols, planContains, planRows, pointOn,
   recPerson, floorPointsUntouched, standCorners, STAND_D, statsFit, zoneCentroid, fixtureAlong, fixtureCorners, fixtureFacing, insideObstacle,
@@ -37,6 +37,7 @@ interface Track {
   zones: Set<string>;
   counted: boolean;
   speed: number | null;
+  flags: number;
 }
 
 interface Goal {
@@ -238,10 +239,10 @@ export class TwinModel {
     this.lastTick = now;
     this.rollDay();
 
-    const obs: { key: string; cam: string; pos: Pt; state: PersonState }[] = [];
+    const obs: { key: string; cam: string; pos: Pt; state: PersonState; flags: number }[] = [];
     const live = new Set<string>();
     if (this.demo) {
-      for (const w of this.stepWalkers(dt)) obs.push({ key: w.key, cam: "demo", pos: w.pos, state: w.state });
+      for (const w of this.stepWalkers(dt)) obs.push({ key: w.key, cam: "demo", pos: w.pos, state: w.state, flags: 0 });
     } else {
       for (const src of this.sources()) {
         const proj = this.projectors.get(src.id);
@@ -254,6 +255,7 @@ export class TwinModel {
           obs.push({
             key: `${src.id}#${b.trackId}`, cam: src.id,
             pos: { x: Math.min(Math.max(p.x, 0), this.plan.widthM), y: Math.min(Math.max(p.y, 0), this.plan.depthM) }, state: b.state,
+            flags: (b.returned ? FLAG_RETURNED : 0) | (b.entered ? FLAG_ENTERED : 0),
           });
         }
       }
@@ -278,9 +280,10 @@ export class TwinModel {
           if (t.trail.length > 50) t.trail.splice(0, t.trail.length - 50);
         }
         t.state = o.state;
+        t.flags |= o.flags;
         t.lastSeen = now;
       } else {
-        this.tracks.set(o.key, { cam: o.cam, pos: o.pos, trail: [o.pos], state: o.state, lastSeen: now, zones: new Set(), counted: false, speed: null });
+        this.tracks.set(o.key, { cam: o.cam, pos: o.pos, trail: [o.pos], state: o.state, lastSeen: now, zones: new Set(), counted: false, speed: null, flags: o.flags });
       }
     }
     for (const [k, t] of this.tracks) if (now - t.lastSeen >= 1500) this.tracks.delete(k);
@@ -338,7 +341,8 @@ export class TwinModel {
       for (const m of members) if ((this.tracks.get(m)?.trail.length ?? 0) > (this.tracks.get(lead)?.trail.length ?? 0)) lead = m;
       const lt = this.tracks.get(lead);
       const state = ts.map((t) => t.state).reduce<PersonState>((a, s) => (STATE_RANK[s] > STATE_RANK[a] ? s : a), "tracked");
-      out.push({ id: lead, pos, trail: [...(lt?.trail ?? []).slice(0, -1), pos], state, cameras: members.length, speed: lt?.speed ?? null });
+      const flags = ts.reduce((a, t) => a | t.flags, 0);
+      out.push({ id: lead, pos, trail: [...(lt?.trail ?? []).slice(0, -1), pos], state, cameras: members.length, speed: lt?.speed ?? null, ...(flags ? { flags } : {}) });
     });
     if (out.length > st.peak) st.peak = out.length;
     if (clusters.length) this.dirty = true;
