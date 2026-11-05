@@ -165,6 +165,10 @@ xcrun notarytool submit agent/dist/Mantis-Agent-macOS-arm64.zip --keychain-profi
 
 Windows-версия без подписи: SmartScreen покажет предупреждение («Подробнее» → «Выполнить в любом случае»).
 
+## Vercel (для тестирования)
+
+`vercel.json` уже настроен: установка `npm ci --ignore-scripts`, сборка `npm run build`, папка `dist`, заголовки для многопоточной нейросети (COOP/COEP) и тип `application/wasm`. Проект на Vercel связан с репозиторием GitHub – каждый `git push` в `main` выкладывается сам. На Vercel нет моста IP-камер: работают камера компьютера/USB, видеофайлы, вход и облако.
+
 ## Хостинг: www.umelcy.com/app/mantis/
 
 Сборка не привязана к адресу (все пути относительные), поэтому одна и та же `dist/` работает и в корне сайта, и в подпапке, и внутри Mantis Агента.
