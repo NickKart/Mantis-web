@@ -6,10 +6,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && tsc --noEmit -p api && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p api",
     "serve": "node bridge/serve.mjs",
     "agent": "bash agent/build.sh"
   },
@@ -18,10 +18,12 @@
     "@fontsource-variable/onest": "5.3.1",
     "@fontsource/jetbrains-mono": "5.3.0",
     "firebase": "12.19.0",
+    "firebase-admin": "14.5.0",
     "onnxruntime-web": "1.30.0",
     "preact": "10.26.9"
   },
   "devDependencies": {
+    "@types/node": "26.6.5",
     "bun": "1.4.2",
     "typescript": "6.0.3",
     "vite": "8.3.1",

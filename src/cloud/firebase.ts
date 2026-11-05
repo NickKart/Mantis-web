@@ -133,6 +133,13 @@ export async function resetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(init().auth, email.trim());
 }
 
+/** Токен входа для запросов к серверу оплаты. */
+export async function idToken(): Promise<string> {
+  const user = init().auth.currentUser;
+  if (!user) throw new Error("Войдите в аккаунт");
+  return user.getIdToken();
+}
+
 /** Подтвердить текущий пароль перед сменой почты или пароля (Firebase требует недавний вход). */
 async function reauth(currentPassword: string): Promise<User> {
   const user = init().auth.currentUser;

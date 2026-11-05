@@ -66,7 +66,8 @@ export function createBridge({ extraTargets = envTargets(), allowRemote = false 
 
   async function handle(req, res, next) {
     const url = new URL(req.url ?? "/", "http://localhost");
-    if (!url.pathname.startsWith("/api/")) return next?.();
+    // /api/billing, /api/yookassa, /api/cron, /api/_lib – оплата (функции Vercel и общий код), не мост
+    if (!url.pathname.startsWith("/api/") || /^\/api\/(billing|yookassa|cron|_lib)\//.test(url.pathname)) return next?.();
     if (!allowRemote && !isLocal(req)) return send(res, 403, { error: "Мост доступен только с этого компьютера" });
     const parts = url.pathname.split("/").filter(Boolean); // api, ...
     try {

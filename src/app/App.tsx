@@ -3,7 +3,9 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { changeEmail, changePassword, friendlyError, resetPassword, signIn, signOut, signUp } from "../cloud/firebase";
 import { channelTitle } from "../multi/channel";
 import { listRecordings, type RecordingMeta } from "../twin/store";
+import { takePaymentReturn } from "./billing";
 import { core } from "./core";
+import { Subscription } from "./Subscription";
 import { onboarding } from "./progress";
 import {
   IcAB, IcBurger, IcCam, IcClose, IcFunnel, IcLive, IcRec, IcSearch, IcStart, Logo,
@@ -34,6 +36,12 @@ export function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [palette, setPalette] = useState(false);
   const [profile, setProfile] = useState(false);
+  // вернулись со страницы оплаты ЮKassa – сразу открываем профиль с подпиской
+  const [paymentReturn] = useState(() => takePaymentReturn());
+  useEffect(() => {
+    if (!paymentReturn) return;
+    void core.account.whenReady().then(() => setProfile(true));
+  }, []);
 
   useEffect(() => {
     document.title = `Mantis – ${TITLES[route.screen]}`;
@@ -67,7 +75,7 @@ export function App() {
       {route.screen === "compare" && <Compare param={route.param} />}
       {route.screen === "records" && <Records param={route.param} />}
       {palette && <Palette onClose={() => setPalette(false)} onProfile={() => setProfile(true)} />}
-      {profile && <ProfileModal onClose={() => setProfile(false)} />}
+      {profile && <ProfileModal returned={paymentReturn} onClose={() => setProfile(false)} />}
       <AskHost />
       <Toasts />
     </div>
@@ -221,11 +229,11 @@ function Palette(p: { onClose: () => void; onProfile: () => void }) {
 }
 
 // ---------------------------------------------------------------- профиль
-function ProfileModal(p: { onClose: () => void }) {
+function ProfileModal(p: { onClose: () => void; returned?: boolean }) {
   const c = useCore();
   const st = c.account.state;
   return st.user
-    ? <AccountModal email={st.user.email ?? ""} onClose={p.onClose} />
+    ? <AccountModal email={st.user.email ?? ""} returned={p.returned} onClose={p.onClose} />
     : <SignInModal onClose={p.onClose} />;
 }
 
@@ -272,8 +280,8 @@ function SignInModal(p: { onClose: () => void }) {
   );
 }
 
-/** Профиль вошедшего: только почта и пароль, оба можно сменить. */
-function AccountModal(p: { email: string; onClose: () => void }) {
+/** Профиль вошедшего: почта и пароль (можно сменить) и подписка. */
+function AccountModal(p: { email: string; returned?: boolean; onClose: () => void }) {
   const c = useCore();
   const [email, setEmail] = useState(p.email);
   const [password, setPassword] = useState("");
@@ -286,7 +294,7 @@ function AccountModal(p: { email: string; onClose: () => void }) {
   const dirty = emailChanged || passChanged;
 
   const save = async () => {
-    if (!dirty) return p.onClose();
+    if (!dirty) return;
     if (emailChanged && !email.includes("@")) return setErr("Введите почту");
     if (passChanged && password.length < 6) return setErr("Новый пароль – минимум 6 символов");
     if (!current) return setErr("Введите текущий пароль");
@@ -300,7 +308,8 @@ function AccountModal(p: { email: string; onClose: () => void }) {
           ? `Письмо отправлено на ${email.trim()} – почта сменится после перехода по ссылке`
           : "Пароль изменён",
       );
-      p.onClose();
+      setPassword("");
+      setCurrent("");
     } catch (e) {
       setErr(friendlyError(e));
     } finally {
@@ -309,7 +318,8 @@ function AccountModal(p: { email: string; onClose: () => void }) {
   };
 
   return (
-    <Modal title="Профиль" onClose={p.onClose}>
+    <Modal title="Профиль" onClose={p.onClose} wide>
+      <h3 class="sub-h">Аккаунт</h3>
       <div class="field"><label for="ac-email">Электронная почта</label>
         <input id="ac-email" class="input" type="email" autoComplete="email" value={email}
           onInput={(e) => setEmail((e.target as HTMLInputElement).value)} />
@@ -327,6 +337,15 @@ function AccountModal(p: { email: string; onClose: () => void }) {
             onKeyDown={(e) => e.key === "Enter" && void save()} /></div>
       )}
       {err && <p class="error-text">{err}</p>}
+      {dirty && (
+        <div class="modal-actions">
+          <button class="btn" disabled={busy} onClick={() => { setEmail(p.email); setPassword(""); setCurrent(""); setErr(null); }}>Отменить</button>
+          <button class="btn primary" disabled={busy} onClick={() => void save()}>Сохранить почту и пароль</button>
+        </div>
+      )}
+      <div class="divider" />
+      <Subscription returned={p.returned} />
+      <div class="divider" />
       <div class="modal-actions" style={{ justifyContent: "space-between" }}>
         <button class="btn ghost" disabled={busy} onClick={async () => {
           if (c.pilot.running) return c.toast("Сначала остановите подсчёт", true);
@@ -334,10 +353,7 @@ function AccountModal(p: { email: string; onClose: () => void }) {
           c.toast("Вы вышли. Статистика этого браузера осталась на нём.");
           p.onClose();
         }}>Выйти</button>
-        <span style={{ display: "flex", gap: "10px" }}>
-          <button class="btn lg" disabled={busy} onClick={p.onClose}>Отмена</button>
-          <button class="btn lg primary" disabled={busy || !dirty} onClick={() => void save()}>Сохранить</button>
-        </span>
+        <button class="btn lg" onClick={p.onClose}>Закрыть</button>
       </div>
     </Modal>
   );
