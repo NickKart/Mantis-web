@@ -155,12 +155,14 @@ export function Compare(p: { param: string }) {
     const dS = (sb.slow - sa.slow) * 100, dL = (sb.look - sa.look) * 100, dE = (sb.enter - sa.enter) * 100;
     const score = dS + dL;
     const more = (x: number) => `${x >= 0 ? "больше" : "меньше"} на ${Math.abs(x).toFixed(1).replace(".", ",")} п.п.`;
+    const q = (t: string) => (t.includes("«") ? t : `«${t}»`);
     let title = "Разница во внимании к витрине небольшая";
-    if (score > 2) title = `«${sideB!.title}» работает лучше: витрину чаще замечают и разглядывают`;
-    if (score < -2) title = `«${sideA!.title}» работает лучше: в «${sideB!.title}» витрину замечают реже`;
-    let text = `В ${mode === "rec" ? "записи" : "периоде"} B притормозивших ${more(dS)}, посмотревших – ${more(dL)}, а доля зашедших ${dE >= 0 ? "выросла" : "снизилась"} на ${Math.abs(dE).toFixed(1).replace(".", ",")} п.п.`;
-    if (dE < 0 && score > 0) text += " Витрина привлекает, а вход не дожимает – стоит проверить дверь и вывеску.";
-    if (dE > 0 && score < 0) text += " Заходят чаще, хотя витрину замечают реже – возможно, сработал вход или акция у двери.";
+    if (score > 2) title = `${q(sideB!.title)} работает лучше: витрину чаще замечают и разглядывают`;
+    if (score < -2) title = `${q(sideA!.title)} работает лучше: в ${q(sideB!.title).replace(/^Витрина /, "витрине ")} витрину замечают реже`;
+    const enterText = Math.abs(dE) < 0.05 ? "доля зашедших не изменилась" : `доля зашедших ${dE > 0 ? "выросла" : "снизилась"} на ${Math.abs(dE).toFixed(1).replace(".", ",")} п.п.`;
+    let text = `В ${mode === "rec" ? "записи" : "периоде"} B притормозивших ${more(dS)}, посмотревших – ${more(dL)}, а ${enterText}.`;
+    if (dE < -0.5 && score > 0) text += " Витрина привлекает, а вход не дожимает – стоит проверить дверь и вывеску.";
+    if (dE > 0.5 && score < 0) text += " Заходят чаще, хотя витрину замечают реже – возможно, сработал вход или акция у двери.";
     verdict = { title, text };
     const minN = mode === "rec" ? 30 : 1000;
     const okFlow = Math.abs(flowD) < 15, okSize = Math.min(A.passed, B.passed) >= minN;
@@ -178,7 +180,8 @@ export function Compare(p: { param: string }) {
       { ok: okSize, text: okSize ? `Больше ${num(minN)} человек в каждой ${mode === "rec" ? "записи" : "части"}` : `Мало людей – нужно хотя бы ${num(minN)} в каждой ${mode === "rec" ? "записи" : "части"}` },
     ];
   }
-  const subtitle = ready ? `Сравниваем ${mode === "rec" ? "записи" : "периоды"}: «${sideA!.title}» → «${sideB!.title}»` : "";
+  const qq = (t: string) => (t.includes("«") ? t : `«${t}»`);
+  const subtitle = ready ? `Сравниваем ${mode === "rec" ? "записи" : "периоды"}: ${qq(sideA!.title)} → ${qq(sideB!.title)}` : "";
 
   const saveCmp = () => {
     if (!ready) return;
