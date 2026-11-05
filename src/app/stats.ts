@@ -282,11 +282,12 @@ export function demoHours(now = new Date()): Record<string, HourStat> {
     const fresh = d < 9 ? 1.14 : 1; // новая витрина последние 9 дней
     for (let h = 9; h <= 21; h++) {
       if (d === 0 && h > now.getHours()) break;
-      const people = Math.round((shape[h] * k * (0.85 + rnd() * 0.3)) / 7);
-      const slowed = Math.round(people * (0.21 + rnd() * 0.04) * fresh);
-      const looked = Math.round(slowed * (0.52 + rnd() * 0.08));
-      const entered = Math.round(people * (0.03 + rnd() * 0.008));
-      const returned = Math.round(people * (0.013 + rnd() * 0.005));
+      const r = (x: number) => Math.floor(x + rnd()); // случайное округление – доли не теряются на малых числах
+      const people = r((shape[h] * k * (0.85 + rnd() * 0.3)) / 7);
+      const slowed = r(people * (0.21 + rnd() * 0.04) * fresh);
+      const looked = r(slowed * (0.52 + rnd() * 0.08) * fresh);
+      const entered = r(people * (0.03 + rnd() * 0.008));
+      const returned = r(people * (0.013 + rnd() * 0.005) * fresh);
       const date = new Date(day);
       date.setHours(h);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}-${String(h).padStart(2, "0")}`;

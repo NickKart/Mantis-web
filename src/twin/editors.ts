@@ -648,7 +648,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
       }
       nodes.push(section("Магазин", ...shopNodes, el("p", "hint-small", hasShop(draft)
         ? "Углы тяните на плане, «+» на стороне добавляет угол – так задаётся любая форма. Витрина и дверь – на стенах магазина."
-        : "Отметьте магазин, затем витрину и дверь на его стенах. В демо люди проходят внутрь только через дверь.")));
+        : "Отметьте магазин, затем витрину и дверь на его стенах.")));
 
       // придуманные камеры (демо)
       if (o.editCameras) {
@@ -804,7 +804,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
       const fxAdd = row(button("+ Стеллаж", "btn small", () => addFixture("rack"), "Добавить стеллаж"),
         button("+ Витрина", "btn small", () => addFixture("showcase"), "Добавить витрину (прилавок) внутри магазина или на плане"));
       nodes.push(section("Стеллажи и витрины", fxList, fxAdd,
-        el("p", "hint-small", "Ставьте внутри магазина или в любом месте плана. Белая сторона витрины – лицевая. В демо прохожие обходят их и останавливаются посмотреть.")));
+        el("p", "hint-small", "Ставьте внутри магазина или в любом месте плана. Белая сторона витрины – лицевая. Зоны у стеллажей покажут, сколько людей у них останавливается.")));
 
       // штендеры
       const stList = el("div", "tw-list");
@@ -830,7 +830,7 @@ function planEditor(o: PlanEditorInput, inline: { container: HTMLElement; onSave
         stList.append(r);
       });
       nodes.push(section("Выносная реклама", stList, button("Добавить штендер", "btn small", () => addStand()),
-        el("p", "hint-small", "Штендеры на улице. Поворот – белой ручкой на плане, фасад смотрит на ручку. В демо прохожие их обходят и иногда останавливаются почитать.")));
+        el("p", "hint-small", "Штендеры на улице. Поворот – белой ручкой на плане, фасад смотрит на ручку.")));
 
       // зоны
       const zList = el("div", "tw-list");
