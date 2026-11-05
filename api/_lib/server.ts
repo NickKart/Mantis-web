@@ -7,7 +7,7 @@
 //   APP_URL – адрес приложения для возврата после оплаты (по умолчанию https://mantis-web-snowy.vercel.app)
 
 import { type App, cert, getApps, initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import { type Firestore, getFirestore } from "firebase-admin/firestore";
 
 export class HttpError extends Error {
@@ -44,16 +44,27 @@ export interface Caller {
   email: string | null;
 }
 
+// Проверка токена входа Firebase по открытым ключам Google (как verifyIdToken в firebase-admin/auth,
+// но без jwks-rsa: тот не загружается в функциях Vercel из-за ESM-зависимости).
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID ?? "jinpix-ac93d";
+const JWKS = createRemoteJWKSet(new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"));
+
 /** Кто вызывает: проверка токена Firebase из заголовка Authorization: Bearer <idToken>. */
 export async function caller(req: Request): Promise<Caller> {
   const h = req.headers.get("authorization") ?? "";
   const token = h.startsWith("Bearer ") ? h.slice(7) : "";
   if (!token) throw new HttpError(401, "Войдите в аккаунт");
+  adminApp(); // без ключа Firebase сразу «оплата не настроена», а не «войдите заново»
   try {
-    const t = await getAuth(adminApp()).verifyIdToken(token);
-    return { uid: t.uid, email: t.email ?? null };
-  } catch (e) {
-    if (e instanceof HttpError) throw e;
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: `https://securetoken.google.com/${PROJECT_ID}`,
+      audience: PROJECT_ID,
+      algorithms: ["RS256"],
+    });
+    if (!payload.sub) throw new Error("нет uid");
+    const email = typeof payload.email === "string" ? payload.email : null;
+    return { uid: payload.sub, email };
+  } catch {
     throw new HttpError(401, "Вход устарел – войдите заново");
   }
 }
