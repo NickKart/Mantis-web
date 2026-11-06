@@ -1,0 +1,87 @@
+# Деплой в прод (mantis.rcmit.ru, VDS на 1Gb): пуш в ветку prod или запуск вручную (Actions → «Деплой в прод»).
+# Контур разработки – Vercel (ветка main), этот workflow его не трогает.
+#
+# Секреты репозитория (Settings → Secrets and variables → Actions):
+#   PROD_SSH_KEY          – закрытый ключ, открытый лежит в /var/www/mantis/.ssh/authorized_keys на сервере
+#   PROD_SSH_KNOWN_HOSTS  – вывод `ssh-keyscan -t ed25519 81.177.166.58`
+# Переменные (там же, вкладка Variables), необязательно:
+#   PROD_HOST – по умолчанию 81.177.166.58; PROD_URL – по умолчанию https://mantis.rcmit.ru
+
+name: Деплой в прод
+
+on:
+  push:
+    branches: [prod]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      PROD_HOST: ${{ vars.PROD_HOST || '81.177.166.58' }}
+      PROD_URL: ${{ vars.PROD_URL || 'https://mantis.rcmit.ru' }}
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: mantis_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Зависимости
+        run: npm ci --ignore-scripts
+
+      - name: Тесты (с базой оплат в PostgreSQL)
+        run: npm test
+        env:
+          TEST_DATABASE_URL: postgres://postgres:test@localhost:5432/mantis_test
+
+      - name: Сборка фронта и сервера API
+        run: |
+          npm run build
+          npm run build:server
+
+      - name: Архив релиза
+        run: |
+          mkdir -p release
+          cp -r dist release/dist
+          cp server/dist/server.cjs server/dist/server.cjs.map server/schema.sql release/
+          tar -czf "mantis-${GITHUB_SHA}.tar.gz" -C release .
+          ls -lh "mantis-${GITHUB_SHA}.tar.gz"
+
+      - name: SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "${{ secrets.PROD_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          printf 'Host prod\n  HostName %s\n  User mantis\n  IdentityFile ~/.ssh/id_deploy\n  IdentitiesOnly yes\n' "$PROD_HOST" > ~/.ssh/config
+
+      - name: Выкладка
+        run: |
+          scp "mantis-${GITHUB_SHA}.tar.gz" deploy/remote-deploy.sh prod:/tmp/
+          ssh prod "bash /tmp/remote-deploy.sh /tmp/mantis-${GITHUB_SHA}.tar.gz ${GITHUB_SHA} && rm -f /tmp/remote-deploy.sh"
+
+      - name: Проверка снаружи
+        run: |
+          curl -fsS "$PROD_URL/api/health"
+          curl -fsSI "$PROD_URL/" | tee /tmp/h.txt
+          grep -qi '^cross-origin-embedder-policy: require-corp' /tmp/h.txt
+          grep -qi '^cross-origin-opener-policy: same-origin' /tmp/h.txt

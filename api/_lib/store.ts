@@ -18,7 +18,8 @@ import {
   DEAD_CARD, type YkPayment, type YkPaymentMethod, cardTitle, createPayment, createPaymentMethod, getPayment,
   getPaymentMethod, reasonText, valueToKop,
 } from "./yookassa.js";
-import { HttpError, db } from "./server.js";
+import { HttpError } from "./server.js";
+import { db } from "./firestore.js";
 
 export const BILLING = "mantis_billing";
 

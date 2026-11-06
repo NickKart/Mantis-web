@@ -5,3 +5,4 @@ dist/
 agent/build/
 agent/.cache/
 agent/dist/
+server/dist/

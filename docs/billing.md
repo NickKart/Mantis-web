@@ -21,7 +21,11 @@
 - Привязать или отвязать карту можно в профиле (`POST /api/billing/card`).
 - В тестовом магазине ЮKassa автоплатежи работают сразу. В боевом их включает менеджер ЮKassa – до этого `YOOKASSA_AUTOPAY` не ставьте, иначе оплата с сохранением карты будет отклоняться.
 
-## База (Firestore, проект jinpix-ac93d)
+## База
+
+На Vercel (разработка) – Firestore, на проде (mantis.rcmit.ru) – PostgreSQL на сервере: те же функции в `api/_lib/store-pg.ts`, схема – `server/schema.sql`. Как устроен прод – [deploy.md](deploy.md).
+
+### Firestore (Vercel, проект jinpix-ac93d)
 
 Пишет только сервер (Firebase Admin). Браузер в эти коллекции не ходит.
 
