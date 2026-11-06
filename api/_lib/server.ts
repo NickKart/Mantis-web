@@ -1,42 +1,19 @@
-// Общее для функций Vercel: Firebase Admin (Firestore и проверка входа), ответы JSON, CORS.
+// Общее для обработчиков API (функции Vercel и сервер server/index.ts): проверка входа, ответы JSON, CORS.
+// База оплат: на Vercel – Firestore (store.ts, firestore.ts), на своём сервере – PostgreSQL (store-pg.ts, DATABASE_URL).
 // Переменные окружения (Vercel → Settings → Environment Variables):
-//   FIREBASE_SERVICE_ACCOUNT – JSON ключа сервисного аккаунта Firebase (проект jinpix-ac93d), целиком одной строкой
+//   FIREBASE_SERVICE_ACCOUNT – JSON ключа сервисного аккаунта Firebase (проект jinpix-ac93d), целиком одной строкой (Vercel)
+//   DATABASE_URL – строка подключения к PostgreSQL (свой сервер, вместо Firestore)
 //   YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY – магазин ЮKassa
 //   YOOKASSA_VAT_CODE – если задан (например 1 – без НДС), к платежу прикладывается чек по 54-ФЗ
 //   CRON_SECRET – секрет для ежедневного списания (Vercel передаёт его сам)
 //   APP_URL – адрес приложения для возврата после оплаты (по умолчанию https://mantis-web-snowy.vercel.app)
 
-import { type App, cert, getApps, initializeApp } from "firebase-admin/app";
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import { type Firestore, getFirestore } from "firebase-admin/firestore";
 
 export class HttpError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
   }
-}
-
-let app: App | null = null;
-
-function adminApp(): App {
-  if (app) return app;
-  const existing = getApps()[0];
-  if (existing) return (app = existing);
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!raw) throw new HttpError(503, "Оплата ещё не настроена: нет ключа Firebase на сервере");
-  let sa: Record<string, string>;
-  try {
-    sa = JSON.parse(raw) as Record<string, string>;
-  } catch {
-    throw new HttpError(503, "Ключ Firebase на сервере повреждён");
-  }
-  if (sa.private_key) sa.private_key = sa.private_key.replace(/\\n/g, "\n");
-  app = initializeApp({ credential: cert(sa as never), projectId: sa.project_id });
-  return app;
-}
-
-export function db(): Firestore {
-  return getFirestore(adminApp());
 }
 
 export interface Caller {
@@ -54,7 +31,10 @@ export async function caller(req: Request): Promise<Caller> {
   const h = req.headers.get("authorization") ?? "";
   const token = h.startsWith("Bearer ") ? h.slice(7) : "";
   if (!token) throw new HttpError(401, "Войдите в аккаунт");
-  adminApp(); // без ключа Firebase сразу «оплата не настроена», а не «войдите заново»
+  // без базы сразу «оплата не настроена», а не «войдите заново»
+  if (!process.env.DATABASE_URL && !process.env.FIREBASE_SERVICE_ACCOUNT) {
+    throw new HttpError(503, "Оплата ещё не настроена: нет базы на сервере");
+  }
   try {
     const { payload } = await jwtVerify(token, JWKS, {
       issuer: `https://securetoken.google.com/${PROJECT_ID}`,

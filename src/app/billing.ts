@@ -1,4 +1,4 @@
-// Клиент сервера оплаты (/api/billing/*). На Vercel – тот же адрес; в Агенте и при разработке – основной сайт.
+// Клиент сервера оплаты (/api/billing/*). На Vercel и на mantis.rcmit.ru – тот же адрес; в Агенте и при разработке – основной сайт.
 import type { Account, Entry, Selection } from "../../api/_lib/tariffs";
 import { idToken } from "../cloud/firebase";
 
@@ -7,7 +7,7 @@ const MAIN = "https://mantis-web-snowy.vercel.app";
 function base(): string {
   const env = import.meta.env.VITE_BILLING_URL as string | undefined;
   if (env) return env.replace(/\/$/, "");
-  return /\.vercel\.app$/.test(location.hostname) ? "" : MAIN;
+  return /(\.vercel\.app|(^|\.)rcmit\.ru)$/.test(location.hostname) ? "" : MAIN;
 }
 
 async function call<T>(path: string, body?: unknown): Promise<T> {
