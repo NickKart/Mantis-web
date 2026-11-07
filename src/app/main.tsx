@@ -4,10 +4,14 @@ import "./app.css";
 import "./screens.css";
 import "./legacy.css";
 import { render } from "preact";
+import { abInit } from "../../ab/client";
+import { idToken } from "../cloud/firebase";
 import { applyLightPlanTheme } from "../twin/paint";
 import { App } from "./App";
 import { core } from "./core";
 
+// A/B-тест (mantis.rcmit.ru): события и закрепление варианта за аккаунтом
+abInit(() => idToken().catch(() => null));
 applyLightPlanTheme();
 render(<App />, document.getElementById("app")!);
 

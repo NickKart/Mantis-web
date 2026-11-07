@@ -121,13 +121,7 @@ export function Seg<T extends string | number>(p: { value: T; options: [T, strin
   );
 }
 
-export function Switch(p: { on: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
-  return (
-    <button type="button" class="switch" role="switch" aria-checked={p.on} aria-label={p.label} disabled={p.disabled} onClick={() => p.onChange(!p.on)}>
-      <span />
-    </button>
-  );
-}
+export { Switch } from "./switch";
 
 export function Bar(p: { value: number; color: string; thin?: boolean }) {
   const w = `${Math.max(0, Math.min(100, p.value * 100)).toFixed(1)}%`;

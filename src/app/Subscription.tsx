@@ -4,13 +4,15 @@ import {
   MAX_CAMERAS, PLAN_IDS, type Period, type PlanId, TARIFFS, TRIAL_DAYS, paymentAmount, planForCameras, plural, rangeText, rub,
 } from "../../api/_lib/tariffs";
 import { type BillingStatus, type ReturnKind, billing } from "./billing";
-import { Switch, useCore } from "./ui";
+import { abTrack } from "../../ab/client";
+import { Switch } from "./switch";
 
 const dateText = (ms: number) => new Date(ms).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
 const cams = (n: number) => `${n} ${plural(n, "камера", "камеры", "камер")}`;
 
-export function Subscription(p: { returned?: ReturnKind | null }) {
-  const c = useCore();
+/** toast – всплывающее сообщение (в новом интерфейсе – core.toast, в старой версии – свой). */
+export function Subscription(p: { returned?: ReturnKind | null; toast: (text: string, error?: boolean) => void }) {
+  const c = { toast: p.toast };
   const [st, setSt] = useState<BillingStatus | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -34,6 +36,7 @@ export function Subscription(p: { returned?: ReturnKind | null }) {
   };
 
   useEffect(() => {
+    abTrack("subscription_open", { returned: p.returned ?? null });
     let alive = true;
     void (async () => {
       const s = await load();
@@ -87,10 +90,12 @@ export function Subscription(p: { returned?: ReturnKind | null }) {
   };
 
   const pay = () => run(async () => {
+    abTrack("payment_start", { kind: "pay", plan, cameras, period });
     const r = await billing.pay(sel, autopay && !acc?.card && saveCard);
     location.href = r.url;
   });
   const trial = () => run(async () => {
+    abTrack("payment_start", { kind: "trial", plan, cameras });
     const r = await billing.trial(plan, cameras);
     if (r.url) {
       location.href = r.url;
@@ -100,6 +105,7 @@ export function Subscription(p: { returned?: ReturnKind | null }) {
     c.toast(`Пробный период ${TRIAL_DAYS} дней начался`);
   });
   const bind = () => run(async () => {
+    abTrack("payment_start", { kind: "card" });
     location.href = (await billing.bindCard()).url;
   });
   const unbind = () => run(async () => {

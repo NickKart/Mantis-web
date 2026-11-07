@@ -1,4 +1,5 @@
 // Дополнительная аналитика – A/B: две сохранённые записи или два периода (оформления витрины). Вывод, проверка корректности, таблица.
+import { abTrack } from "../../../ab/client";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { HourStat } from "../../pilot/hours";
 import { type RecordingMeta, listRecordings } from "../../twin/store";
@@ -210,7 +211,7 @@ export function Compare(p: { param: string }) {
         </div>
         <div class="no-print"><Seg label="Что сравниваем" value={mode} options={[["rec", "Сохранённые записи"], ["period", "Периоды"]]} onChange={(m) => { setMode(m); setOpen(null); go("compare", m); }} /></div>
         <button class="btn no-print" disabled={!ready} onClick={saveCmp}>Сохранить</button>
-        <button class="btn primary no-print" disabled={!ready} onClick={() => window.print()}>Отчёт для клиента</button>
+        <button class="btn primary no-print" disabled={!ready} onClick={() => { abTrack("report_exported", { screen: "compare" }); window.print(); }}>Отчёт для клиента</button>
       </header>
       <div class="print-only print-title"><b>Mantis · A/B-сравнение витрины</b><span>{subtitle} · {new Date().toLocaleDateString("ru-RU")}</span></div>
 

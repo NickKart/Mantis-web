@@ -26,6 +26,7 @@ mkdir -p "$REL"
 tar -xzf "$ARCHIVE" -C "$REL"
 rm -f "$ARCHIVE"
 [ -f "$REL/dist/index.html" ] && [ -f "$REL/server.cjs" ] || { echo "В архиве нет dist/index.html или server.cjs"; exit 1; }
+[ -f "$REL/dist/b/index.html" ] || echo "Внимание: в архиве нет старой версии (dist/b) – вариант B A/B-теста не откроется"
 
 echo "== Схема базы"
 if ! psql -q -v ON_ERROR_STOP=1 -d mantis -f "$REL/schema.sql" >/tmp/mantis-schema.log 2>&1; then

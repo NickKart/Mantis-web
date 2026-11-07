@@ -6,14 +6,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && tsc --noEmit -p server && vite build",
+    "build": "tsc --noEmit && tsc --noEmit -p server && tsc --noEmit -p legacy && vite build && vite build --config legacy/vite.config.ts",
     "build:server": "node server/build.mjs",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p server",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p server && tsc --noEmit -p legacy",
     "serve": "node bridge/serve.mjs",
     "agent": "bash agent/build.sh",
-    "server": "node server/dist/server.cjs"
+    "server": "node server/dist/server.cjs",
+    "build:b": "vite build --config legacy/vite.config.ts",
+    "dev:b": "vite --config legacy/vite.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/inter": "5.2.6",

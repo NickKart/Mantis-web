@@ -1,4 +1,5 @@
 // Аналитика: воронка витрины за период, изменение к прошлому периоду, по часам и дням недели, главное, выручка, касса.
+import { abTrack } from "../../../ab/client";
 import { useMemo, useState } from "preact/hooks";
 import type { Showcase } from "../core";
 import { addDays, dayKey, num, parseDay, pct, rub } from "../format";
@@ -226,7 +227,7 @@ function AnalyticsHead(p: { period: Period; kind: Period["kind"]; setPeriod: (k:
         <Seg label="Период" value={p.kind} onChange={p.setPeriod}
           options={[["today", "Сегодня"], ["7", "7 дней"], ["30", "30 дней"], ["custom", p.kind === "custom" ? periodTitle(p.period) : "Период…"]]} />
       </div>
-      <button class="btn no-print" onClick={() => window.print()}><IcDownload size={16} />Отчёт PDF</button>
+      <button class="btn no-print" onClick={() => { abTrack("report_exported", { screen: "analytics" }); window.print(); }}><IcDownload size={16} />Отчёт PDF</button>
     </header>
   );
 }

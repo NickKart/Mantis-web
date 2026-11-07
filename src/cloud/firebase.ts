@@ -5,6 +5,7 @@
 //   users/{uid}/devices/{id}    – точки с пилотом (браузер, Mac, Windows): последний сигнал и состояние
 //   users/{uid}/camera_hours/{камера}_{день} – счётчики по каждой камере (пилот на нескольких камерах: Mac, Windows)
 
+import { abTrack } from "../../ab/client";
 import { type FirebaseApp, initializeApp } from "firebase/app";
 import {
   type Auth, type User, EmailAuthProvider, createUserWithEmailAndPassword, getAuth, onAuthStateChanged,
@@ -127,6 +128,7 @@ export async function signIn(email: string, password: string): Promise<void> {
 
 export async function signUp(email: string, password: string): Promise<void> {
   await createUserWithEmailAndPassword(init().auth, email.trim(), password);
+  abTrack("signup");
 }
 
 export async function resetPassword(email: string): Promise<void> {

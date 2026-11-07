@@ -1,6 +1,7 @@
 // Хранилище двойника в браузере: план и статистика дня – localStorage, картинки подложек и записи
 // (с копией видео) – IndexedDB. Как папка Twin/ в Application Support у Mantis для Mac.
 
+import { abTrack } from "../../ab/client";
 import { type RecordingData, Timeline, normalizePlan } from "./plan";
 
 const DB = "mantis-twin";
@@ -124,6 +125,7 @@ export async function saveRecording(
     if (video) await tx("blobs", "readwrite", (s) => s.put(video, `rec:${id}:video`));
     if (background) await tx("blobs", "readwrite", (s) => s.put(background, `rec:${id}:plan`));
     await tx("recordings", "readwrite", (s) => s.put(meta));
+    abTrack("recording_saved", { source, video: !!video });
     return meta;
   } catch (e) {
     console.warn("[mantis] запись двойника не сохранилась", e);
