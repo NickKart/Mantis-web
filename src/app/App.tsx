@@ -20,7 +20,7 @@ import { Records } from "./screens/Records";
 
 const MENU: { screen: Screen; label: string; Icon: typeof IcStart; color: string; step?: number }[] = [
   { screen: "start", label: "Как начать работать", Icon: IcStart, color: "#D97706" },
-  { screen: "live", label: "Live", Icon: IcLive, color: "#E5484D", step: 1 },
+  { screen: "live", label: "Запустить подсчёт Live", Icon: IcLive, color: "#E5484D", step: 1 },
   { screen: "setup", label: "Настройка камеры", Icon: IcCam, color: "#0891B2", step: 0 },
   { screen: "analytics", label: "Аналитика", Icon: IcFunnel, color: "#2370B4", step: 2 },
   { screen: "compare", label: "Дополнительная аналитика", Icon: IcAB, color: "#7C3AED" },
