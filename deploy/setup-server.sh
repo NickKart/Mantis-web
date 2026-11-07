@@ -95,12 +95,26 @@ YOOKASSA_SECRET_KEY=
 YOOKASSA_AUTOPAY=
 # Код НДС для чеков 54-ФЗ (например 1 – без НДС); пусто – без чеков
 YOOKASSA_VAT_CODE=
+
+# A/B-тест веб-версии (docs/ab-test.md): почты через запятую
+# AB_ADMINS – кому открыт отчёт https://$DOMAIN/ab.html; AB_EXCLUDE – аккаунты команды, в статистику не идут
+AB_ADMINS=
+AB_EXCLUDE=
 EOF
   chown root:"$APP" "$ETC/$APP.env"
   chmod 640 "$ETC/$APP.env"
   warn "Впишите ключи ЮKassa в $ETC/$APP.env"
 else
   echo "Уже есть, не трогаем"
+  if ! grep -q '^AB_ADMINS=' "$ETC/$APP.env"; then
+    cat >> "$ETC/$APP.env" <<EOF
+# A/B-тест веб-версии (docs/ab-test.md): почты через запятую
+# AB_ADMINS – кому открыт отчёт https://$DOMAIN/ab.html; AB_EXCLUDE – аккаунты команды, в статистику не идут
+AB_ADMINS=
+AB_EXCLUDE=
+EOF
+    echo "Добавлены настройки A/B-теста (AB_ADMINS, AB_EXCLUDE)"
+  fi
 fi
 
 # ---------------------------------------------------------------- 4. systemd
@@ -404,6 +418,19 @@ $H2_LINE
 
     # модель нейросети – кэш на неделю
     location /models/ {
+        include snippets/mantis-headers.conf;
+        add_header Cache-Control "public, max-age=604800" always;
+        try_files \$uri =404;
+    }
+
+    # старая версия (вариант B A/B-теста) – те же правила кэша
+    location /b/assets/ {
+        include snippets/mantis-headers.conf;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files \$uri =404;
+    }
+
+    location /b/models/ {
         include snippets/mantis-headers.conf;
         add_header Cache-Control "public, max-age=604800" always;
         try_files \$uri =404;

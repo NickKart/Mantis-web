@@ -1,0 +1,9 @@
+{
+  "experiment": "web-2026-11",
+  "active": true,
+  "splitB": 0.5,
+  "force": null,
+  "winner": null,
+  "hosts": ["mantis.rcmit.ru"],
+  "activationDays": 7
+}

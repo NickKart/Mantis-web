@@ -2,6 +2,7 @@
 // Логика как у AccountModel + HourlyStore в iOS: при входе облако и браузер объединяются (максимум по полям),
 // дальше изменённые часы уходят в облако раз в минуту.
 
+import { abTrack, abUser } from "../../ab/client";
 import type { User } from "firebase/auth";
 import { HourlyStore } from "../pilot/hours";
 import {
@@ -43,6 +44,7 @@ export class Account {
         const changed = user?.uid !== this.state.user?.uid;
         this.set({ user });
         resolveReady();
+        void abUser(user?.uid ?? null);
         if (changed && user) void this.pull();
       });
     } catch (e) {
@@ -105,6 +107,9 @@ export class Account {
     if (!uid || this.uploading || this.hours.pending === 0) return;
     this.uploading = true;
     const batch = this.hours.takeDirty();
+    // A/B-тест: подсчёт реально шёл (не чаще раза в 10 минут)
+    const passed = Object.values(batch).reduce((n, h) => n + (h.passed || 0), 0);
+    if (passed > 0) abTrack("hours_saved", { passed, hours: Object.keys(batch).length }, 10 * 60_000);
     try {
       // Без интернета Firestore держит запись в своей очереди (и на диске) и отправит её сам –
       // поэтому долго не ждём, а просто сообщаем, что отправка отложена.

@@ -4,6 +4,7 @@
 // точки (users/{uid}/devices/{id}, platform "windows", список камер). Компьютер не засыпает, каждая камера
 // сама перезапускается при сбое, после перезапуска приложения подсчёт продолжается.
 
+import { abTrack } from "../../ab/client";
 import type { Account } from "../cloud/account";
 import { type DeviceCamera, saveDevice } from "../cloud/firebase";
 import type { Detector } from "../detector";
@@ -145,6 +146,7 @@ export class MultiPilot {
     } else {
       const n = this.makeChannel(config);
       this.channels.push(n);
+      abTrack("camera_added", { kind: config.kind, cameras: this.channels.length });
       if (this.running) await n.start(this.perCameraFps);
       else if (this.previewOn) void n.startPreview();
     }
@@ -200,6 +202,7 @@ export class MultiPilot {
   async start(): Promise<void> {
     if (this.running || !this.channels.length) return;
     this.running = true;
+    abTrack("counting_started", { cameras: this.channels.length });
     try {
       localStorage.setItem(KEYS.active, "1");
     } catch {

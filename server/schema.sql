@@ -74,3 +74,33 @@ CREATE TABLE IF NOT EXISTS billing_ledger (
 );
 
 CREATE INDEX IF NOT EXISTS billing_ledger_uid_at ON billing_ledger (uid, at DESC);
+
+-- ---------------------------------------------------------------- A/B-тест веб-версии (server/ab.ts, docs/ab-test.md)
+-- Вариант закрепляется за аккаунтом при первом входе: a – новая версия, b – старая (/b/).
+CREATE TABLE IF NOT EXISTS ab_assignments (
+  experiment   text        NOT NULL,
+  uid          text        NOT NULL,            -- uid пользователя Firebase
+  variant      text        NOT NULL CHECK (variant IN ('a', 'b')),
+  test         boolean     NOT NULL DEFAULT false, -- команда (?ab=, AB_EXCLUDE) – в статистику не идёт
+  vid          text,                            -- браузер, в котором вошёл впервые (cookie mantis_vid)
+  email        text,
+  assigned_at  timestamptz NOT NULL DEFAULT now(),
+  last_seen_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (experiment, uid)
+);
+
+CREATE TABLE IF NOT EXISTS ab_events (
+  id         bigserial   PRIMARY KEY,
+  experiment text        NOT NULL,
+  variant    text        NOT NULL CHECK (variant IN ('a', 'b')),
+  uid        text,                              -- пусто, пока посетитель не вошёл
+  vid        text        NOT NULL,
+  test       boolean     NOT NULL DEFAULT false,
+  name       text        NOT NULL,              -- список – ab/events.ts
+  data       jsonb,
+  at         timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS ab_events_exp_name ON ab_events (experiment, name, at);
+CREATE INDEX IF NOT EXISTS ab_events_uid ON ab_events (uid) WHERE uid IS NOT NULL;
+CREATE INDEX IF NOT EXISTS ab_events_vid ON ab_events (vid);

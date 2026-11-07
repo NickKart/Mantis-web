@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { changeEmail, changePassword, friendlyError, resetPassword, signIn, signOut, signUp } from "../cloud/firebase";
 import { channelTitle } from "../multi/channel";
 import { listRecordings, type RecordingMeta } from "../twin/store";
+import { abTrack } from "../../ab/client";
 import { type ReturnKind, takePaymentReturn } from "./billing";
 import { core } from "./core";
 import { Subscription } from "./Subscription";
@@ -45,6 +46,7 @@ export function App() {
 
   useEffect(() => {
     document.title = `Mantis – ${TITLES[route.screen]}`;
+    abTrack("screen_view", { screen: route.screen });
     setMenuOpen(false);
     window.scrollTo(0, 0);
   }, [route.screen, route.param]);
@@ -191,7 +193,7 @@ function Palette(p: { onClose: () => void; onProfile: () => void }) {
     if (core.pilot.running) list.push({ title: "Остановить подсчёт", hint: "Live", run: () => void core.stopCounting() });
     else list.push({ title: "Запустить подсчёт", hint: "Live", run: () => { void core.startCounting(); go("live"); } });
     list.push({ title: "Записать фрагмент", hint: "Live", run: () => { core.startRecording(); go("live"); } });
-    list.push({ title: "Отчёт PDF", hint: "Аналитика", run: () => { go("analytics"); setTimeout(() => window.print(), 400); } });
+    list.push({ title: "Отчёт PDF", hint: "Аналитика", run: () => { go("analytics"); abTrack("report_exported", { screen: "analytics" }); setTimeout(() => window.print(), 400); } });
     list.push({ title: "Сравнить записи (A/B)", hint: "Дополнительная аналитика", run: () => go("compare", "rec") });
     list.push({ title: "Сравнить периоды", hint: "Дополнительная аналитика", run: () => go("compare", "period") });
     for (const r of recs) list.push({ title: r.name, hint: "Запись", run: () => go("records", r.id) });
@@ -348,7 +350,7 @@ function AccountModal(p: { email: string; returned?: ReturnKind | null; onClose:
         </div>
       )}
       <div class="divider" />
-      <Subscription returned={p.returned} />
+      <Subscription returned={p.returned} toast={(t, e) => c.toast(t, e)} />
       <div class="divider" />
       <div class="modal-actions" style={{ justifyContent: "space-between" }}>
         <button class="btn ghost" disabled={busy} onClick={async () => {

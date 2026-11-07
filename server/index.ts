@@ -3,6 +3,7 @@
 //
 //   node server.cjs          – слушать HOST:PORT (по умолчанию 127.0.0.1:3100)
 //   node server.cjs charge   – ежедневное продление подписок и выход (запускает таймер systemd)
+//   node server.cjs ab-report – отчёт A/B-теста веб-версии в консоль (docs/ab-test.md)
 //
 // Переменные окружения – см. deploy/mantis.env.example.
 
@@ -16,6 +17,7 @@ import status from "../api/billing/status.js";
 import trial from "../api/billing/trial.js";
 import webhook from "../api/yookassa/webhook.js";
 import { chargeAllDue, closeDb } from "../api/_lib/store-pg.js";
+import { assignHandler, closeAbDb, eventHandler, report, reportHandler, reportText } from "./ab.js";
 
 type Handler = { fetch: (req: Request) => Promise<Response> };
 
@@ -27,6 +29,9 @@ const ROUTES: Record<string, Handler> = {
   "/api/billing/status": status,
   "/api/billing/trial": trial,
   "/api/yookassa/webhook": webhook,
+  "/api/ab/assign": assignHandler,
+  "/api/ab/event": eventHandler,
+  "/api/ab/report": reportHandler,
 };
 
 const MAX_BODY = 1 << 20;
@@ -104,6 +109,12 @@ async function main(): Promise<void> {
     await closeDb();
     return;
   }
+  if (process.argv[2] === "ab-report") {
+    const r = await report();
+    console.log(process.argv[3] === "--json" ? JSON.stringify(r, null, 2) : reportText(r));
+    await closeAbDb();
+    return;
+  }
   const host = process.env.HOST ?? "127.0.0.1";
   const port = Number(process.env.PORT ?? 3100);
   const server = createServer((req, res) => {
@@ -115,7 +126,7 @@ async function main(): Promise<void> {
   });
   server.listen(port, host, () => console.log(`Mantis API: http://${host}:${port}`));
   const stop = () => {
-    server.close(() => void closeDb().finally(() => process.exit(0)));
+    server.close(() => void Promise.all([closeDb(), closeAbDb()]).finally(() => process.exit(0)));
     setTimeout(() => process.exit(0), 5000).unref();
   };
   process.on("SIGTERM", stop);

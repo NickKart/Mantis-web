@@ -1,0 +1,7 @@
+{
+  "name": "mantis-web-legacy",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Старая версия Mantis web (вариант B A/B-теста). Зависимости – в корневом package.json, сборка – npm run build в корне."
+}
