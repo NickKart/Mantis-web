@@ -1,6 +1,6 @@
-// «Как начать работать»: три шага по реальному состоянию и что появится в аналитике.
+// «Как начать работать»: четыре шага по реальному состоянию и что появится в аналитике.
 import { num } from "../format";
-import { IcApple, IcArrow, IcCam, IcCheck, IcFunnel, IcLive, IcPlug, IcWindows } from "../icons";
+import { IcApple, IcArrow, IcCam, IcCheck, IcFunnel, IcLive, IcPlug, IcUser, IcWindows } from "../icons";
 import { MIN_PEOPLE, onboarding } from "../progress";
 import { Bar, type Screen, go, useCore } from "../ui";
 
@@ -8,6 +8,10 @@ import { Bar, type Screen, go, useCore } from "../ui";
 export const AGENT_LINKS = { windows: "downloads/Mantis-Agent-Windows.zip", mac: "downloads/Mantis-Agent-macOS-arm64.zip" };
 
 const STEPS: { title: string; time: string; cta: string; doneText: string; text: string; menu: string; Icon: typeof IcCam; screen: Screen }[] = [
+  {
+    title: "Зарегистрируйтесь в приложении", time: "≈ 1 минута", cta: "Зарегистрироваться", doneText: "Вход выполнен", menu: "Вход и Регистрация", Icon: IcUser, screen: "start",
+    text: "Создайте аккаунт по почте и паролю. Статистика будет сохраняться в облаке, и её можно смотреть с любого устройства.",
+  },
   {
     title: "Настройте камеру", time: "≈ 5 минут", cta: "Настроить камеру", doneText: "Камера настроена", menu: "Настройка камеры", Icon: IcCam, screen: "setup",
     text: "Подключите камеру или телефон и отметьте на кадре витрину, вход в магазин, область где люди проходят мимо витрины/входа. Именно эти места будет анализировать камера.",
@@ -25,9 +29,9 @@ const STEPS: { title: string; time: string; cta: string; doneText: string; text:
 export function Onboarding() {
   const c = useCore();
   const ob = onboarding();
-  const all = ob.next >= 3;
+  const all = ob.next >= 4;
   const today = c.today();
-  const counting = ob.done[1];
+  const counting = ob.done[2];
   const doneCount = ob.done.filter(Boolean).length;
   const preview: [string, number, string, string][] = [
     ["Прошли мимо", today.people, "var(--r1)", "весь поток у витрины"],
@@ -35,9 +39,11 @@ export function Onboarding() {
     ["Посмотрели", today.looked, "var(--r3)", "насколько оформление цепляет"],
     ["Зашли", today.entered, "var(--r4)", "сколько внимания стало визитами"],
   ];
+  const openProfile = () => window.dispatchEvent(new Event("mantis:profile"));
   const start = (i: number) => {
-    if (i === 1 && !c.pilot.running) void c.startCounting();
-    go(STEPS[i].screen, i === 0 && !c.pilot.channels.length ? "new" : "");
+    if (i === 0) return openProfile();
+    if (i === 2 && !c.pilot.running) void c.startCounting();
+    go(STEPS[i].screen, i === 1 && !c.pilot.channels.length ? "new" : "");
   };
   return (
     <main class="main onb" id="start">
@@ -45,14 +51,14 @@ export function Onboarding() {
         <h1>{all ? "Всё готово – Mantis считает" : ob.next === 0 ? "Добро пожаловать в Mantis" : "Отлично, продолжаем"}</h1>
         <p class="onb-lead">{all
           ? "Аналитика наполняется. Загляните через час – появятся первые выводы, а через неделю можно сравнивать оформления витрины."
-          : "Три шага – и вы увидите, сколько людей проходит мимо витрины, сколько её замечает и сколько заходит. Займёт около 5 минут."}</p>
+          : "Четыре шага – и вы увидите, сколько людей проходит мимо витрины, сколько её замечает и сколько заходит. Займёт около 5 минут."}</p>
         {!all && (
-          <div class="onb-progress" role="progressbar" aria-label="Начало работы" aria-valuemin={0} aria-valuemax={3} aria-valuenow={doneCount}>
+          <div class="onb-progress" role="progressbar" aria-label="Начало работы" aria-valuemin={0} aria-valuemax={4} aria-valuenow={doneCount}>
             <span class="onb-progress-top">
-              <b>Начало работы · {doneCount} из 3</b>
+              <b>Начало работы · {doneCount} из 4</b>
               <span>Дальше: {STEPS[ob.next].title.toLowerCase()}</span>
             </span>
-            <span class="onb-track"><span style={{ width: `${Math.round((doneCount / 3) * 100)}%` }} /></span>
+            <span class="onb-track"><span style={{ width: `${Math.round((doneCount / 4) * 100)}%` }} /></span>
           </div>
         )}
       </header>
@@ -77,8 +83,10 @@ export function Onboarding() {
               <div style={{ marginTop: "auto" }}>
                 {done ? (
                   <span class="onb-done">
-                    <span>{i === 2 && ob.people >= MIN_PEOPLE ? `Собрано: ${num(ob.people)} чел.` : i === 1 && !c.pilot.running ? "Подсчёт запускался" : s.doneText}</span>
-                    <a href={`#/${s.screen}`}>{i === 0 ? "Изменить" : "Открыть"}</a>
+                    <span>{i === 3 && ob.people >= MIN_PEOPLE ? `Собрано: ${num(ob.people)} чел.` : i === 2 && !c.pilot.running ? "Подсчёт запускался" : s.doneText}</span>
+                    {i === 0
+                      ? <a href="#" onClick={(e) => { e.preventDefault(); openProfile(); }}>Профиль</a>
+                      : <a href={`#/${s.screen}`}>{i === 1 ? "Изменить" : "Открыть"}</a>}
                   </span>
                 ) : (
                   <button class="btn primary lg wide" onClick={() => start(i)}>{s.cta}<IcArrow size={16} width={2} /></button>

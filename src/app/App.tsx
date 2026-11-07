@@ -20,9 +20,9 @@ import { Records } from "./screens/Records";
 
 const MENU: { screen: Screen; label: string; Icon: typeof IcStart; color: string; step?: number }[] = [
   { screen: "start", label: "Как начать работать", Icon: IcStart, color: "#D97706" },
-  { screen: "live", label: "Запустить подсчёт Live", Icon: IcLive, color: "#E5484D", step: 1 },
-  { screen: "setup", label: "Настройка камеры", Icon: IcCam, color: "#0891B2", step: 0 },
-  { screen: "analytics", label: "Аналитика", Icon: IcFunnel, color: "#2370B4", step: 2 },
+  { screen: "live", label: "Запустить подсчёт Live", Icon: IcLive, color: "#E5484D", step: 2 },
+  { screen: "setup", label: "Настройка камеры", Icon: IcCam, color: "#0891B2", step: 1 },
+  { screen: "analytics", label: "Аналитика", Icon: IcFunnel, color: "#2370B4", step: 3 },
   { screen: "compare", label: "Дополнительная аналитика", Icon: IcAB, color: "#7C3AED" },
   { screen: "records", label: "Записи", Icon: IcRec, color: "#0D9488" },
 ];
@@ -105,23 +105,27 @@ function Sidebar(p: { screen: Screen; open: boolean; onToggle: () => void; onSea
         </button>
       </div>
       <div class="nav-list">
-        {MENU.map((m) => (
+        {MENU.map((m, i) => [
+          // вход и регистрация – сразу после «Как начать работать» (шаг 1 онбординга)
+          i === 1 && (
+            <button key="profile" class="nav" onClick={p.onProfile} title={user ? `Профиль · ${email}` : "Войти или зарегистрироваться"}>
+              <span class="avatar">{user ? initials : "?"}</span>
+              <span class="nav-text">{user ? pointName || email : "Вход и Регистрация"}</span>
+              {!user && ob.next === 0 && <span class="dot-next" aria-label="следующий шаг" />}
+            </button>
+          ),
           <a key={m.screen} class="nav" href={`#/${m.screen}`} aria-current={p.screen === m.screen ? "page" : undefined}>
             <m.Icon color={p.screen === m.screen && m.screen === "analytics" ? "#2370B4" : m.color} />
             <span class="nav-text">{m.label}</span>
             {m.screen === "live" && c.pilot.running && <span class={`dot-live ${c.pilot.state === "recovering" ? "warn" : ""}`} title="Идёт подсчёт" />}
             {m.step !== undefined && m.step === ob.next && !(m.screen === "live" && c.pilot.running) && <span class="dot-next" aria-label="следующий шаг" />}
-          </a>
-        ))}
+          </a>,
+        ])}
       </div>
       <div class="side-bottom">
         <div class="nav-list">
           <button class="nav" onClick={p.onSearch}>
             <IcSearch />Поиск<span class="kbd">{mac ? "⌘K" : "Ctrl K"}</span>
-          </button>
-          <button class="nav" onClick={p.onProfile} title={user ? `Профиль · ${email}` : "Войти или зарегистрироваться"}>
-            <span class="avatar">{user ? initials : "?"}</span>
-            <span class="nav-text">{user ? pointName || email : "Войти"}</span>
           </button>
         </div>
         <SystemBox />

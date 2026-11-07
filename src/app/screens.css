@@ -8,7 +8,8 @@
 .onb-progress-top b { font-size: 14px; font-weight: 600; color: var(--ink); }
 .onb-track { display: block; height: 6px; background: #DCE2EC; border-radius: 3px; overflow: hidden; }
 .onb-track span { display: block; height: 6px; background: var(--accent); border-radius: 3px; transition: width 0.3s ease; }
-.onb-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.onb-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 1360px) { .onb-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .onb-step { display: flex; flex-direction: column; gap: 14px; padding: 24px; border-radius: 16px; background: #FFFFFF; border: 1px solid var(--line); min-height: 260px; }
 .onb-step.hl { border: 2px solid var(--focus); box-shadow: 0 8px 24px rgba(31, 41, 55, 0.08); padding: 23px; }
 .onb-step-top { display: flex; align-items: center; gap: 12px; }
