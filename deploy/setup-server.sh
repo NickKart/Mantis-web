@@ -10,7 +10,8 @@
 #   3. Системный пользователь mantis, папки /var/www/mantis (релизы) и /etc/mantis (настройки).
 #   4. Службы systemd: API (mantis-api), ежедневное продление подписок, ночной бэкап базы.
 #   5. nginx: сайт mantis.rcmit.ru рядом с rcmit.ru (rcmit.conf не трогаем), сертификат Let's Encrypt.
-#   6. Права для автодеплоя из GitHub: SSH-ключ пользователя mantis и перезапуск mantis-api без пароля.
+#   6. Автодеплой: сервер раз в минуту проверяет новый релиз на GitHub и выкладывает его сам (mantis-update.timer).
+#      Ключи и секреты не нужны – репозиторий публичный.
 
 set -euo pipefail
 
@@ -58,11 +59,7 @@ say "Пользователь $APP"
 if ! id "$APP" >/dev/null 2>&1; then
   useradd --system --create-home --home-dir "$ROOT" --shell /bin/bash "$APP"
 fi
-install -d -o "$APP" -g "$APP" -m 755 "$ROOT" "$ROOT/releases"
-install -d -o "$APP" -g "$APP" -m 700 "$ROOT/.ssh"
-touch "$ROOT/.ssh/authorized_keys"
-chown "$APP:$APP" "$ROOT/.ssh/authorized_keys"
-chmod 600 "$ROOT/.ssh/authorized_keys"
+install -d -o "$APP" -g "$APP" -m 755 "$ROOT" "$ROOT/releases" "$ROOT/state"
 
 say "База $APP"
 # вход по сокету без пароля: пользователь ОС mantis = роль mantis (peer)
@@ -209,6 +206,71 @@ Persistent=true
 WantedBy=timers.target
 EOF
 
+cat > /usr/local/bin/mantis-update <<'EOF'
+#!/usr/bin/env bash
+# Автодеплой: если на GitHub вышел новый прод-релиз – скачать, сверить sha256 и выложить (remote-deploy.sh из архива).
+# Запускает mantis-update.timer раз в минуту от пользователя mantis. Неудачный релиз помечается и больше не пробуется.
+set -euo pipefail
+BASE="${MANTIS_RELEASE_URL:-https://github.com/NickKart/mantis-web/releases/latest/download}"
+ROOT="${MANTIS_ROOT:-/var/www/mantis}"
+STATE=$ROOT/state
+
+LATEST=$(curl -fsSL --max-time 20 "$BASE/version.txt" 2>/dev/null | tr -d '[:space:]') || exit 0
+[[ "$LATEST" =~ ^[0-9a-f]{40}$ ]] || exit 0
+CURRENT=$(basename "$(readlink -f "$ROOT/current")")
+[ "$LATEST" = "$CURRENT" ] && exit 0
+[ -f "$STATE/failed-$LATEST" ] && exit 0
+
+echo "Новый релиз $LATEST (сейчас $CURRENT)"
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+curl -fsSL --max-time 600 -o "$TMP/mantis.tar.gz" "$BASE/mantis.tar.gz"
+curl -fsSL --max-time 20 -o "$TMP/mantis.tar.gz.sha256" "$BASE/mantis.tar.gz.sha256"
+(cd "$TMP" && sha256sum --quiet -c mantis.tar.gz.sha256)
+V=$(tar -xzf "$TMP/mantis.tar.gz" -O ./version.txt | tr -d '[:space:]')
+if [ "$V" != "$LATEST" ]; then
+  echo "В архиве версия $V – релиз сменился во время скачивания, попробую через минуту"
+  exit 0
+fi
+tar -xzf "$TMP/mantis.tar.gz" -O ./remote-deploy.sh > "$TMP/deploy.sh"
+if bash "$TMP/deploy.sh" "$TMP/mantis.tar.gz" "$LATEST"; then
+  rm -f "$STATE"/failed-*
+else
+  touch "$STATE/failed-$LATEST"
+  echo "Релиз $LATEST не выложен и помечен как неудачный"
+  exit 1
+fi
+EOF
+chmod 755 /usr/local/bin/mantis-update
+
+cat > /etc/systemd/system/mantis-update.service <<EOF
+[Unit]
+Description=Mantis: проверка и выкладка нового релиза с GitHub
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=$APP
+Group=$APP
+ExecStart=/usr/local/bin/mantis-update
+PrivateTmp=true
+TimeoutStartSec=15min
+EOF
+
+cat > /etc/systemd/system/mantis-update.timer <<'EOF'
+[Unit]
+Description=Mantis: проверять новый релиз каждую минуту
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target
+EOF
+
 systemctl daemon-reload
 systemctl enable --now mantis-charge.timer mantis-backup.timer >/dev/null
 # API включается сейчас, а запускается первым деплоем (пока нет $ROOT/current)
@@ -218,7 +280,7 @@ echo "mantis-api, mantis-charge.timer, mantis-backup.timer"
 say "Права для автодеплоя"
 SYSTEMCTL=$(command -v systemctl)
 cat > /etc/sudoers.d/mantis-deploy <<EOF
-# Автодеплой из GitHub (пользователь mantis): только перезапуск API
+# Автодеплой (mantis-update от пользователя mantis): только перезапуск API
 $APP ALL=(root) NOPASSWD: $SYSTEMCTL restart mantis-api, $SYSTEMCTL is-active mantis-api
 EOF
 chmod 440 /etc/sudoers.d/mantis-deploy
@@ -362,14 +424,22 @@ ln -sf "$AVAILABLE" "$ENABLED"
 reload_nginx
 echo "https://$DOMAIN"
 
+# ---------------------------------------------------------------- автодеплой
+say "Автодеплой"
+systemctl enable --now mantis-update.timer >/dev/null
+systemctl start mantis-update.service || warn "Первый запуск автодеплоя не удался: journalctl -u mantis-update"
+if [ -L "$ROOT/current" ]; then
+  echo "Выложен релиз $(basename "$(readlink -f "$ROOT/current")")"
+else
+  echo "Прод-релизов на GitHub пока нет – сервер выложит первый, как только он появится"
+fi
+
 # ---------------------------------------------------------------- итог
 say "Готово"
 cat <<EOF
 Дальше:
-  1. Ключи ЮKassa:          nano $ETC/$APP.env
-  2. Ключ автодеплоя:       добавьте открытый ключ в $ROOT/.ssh/authorized_keys
-     (закрытый – в GitHub: Settings → Secrets → Actions → PROD_SSH_KEY)
-  3. Отпечаток сервера:     ssh-keyscan -t ed25519 $SERVER_IP   → секрет PROD_SSH_KNOWN_HOSTS
-  4. Первый деплой:         пуш в ветку prod или Actions → «Деплой в прод» → Run workflow
-  5. Уведомления ЮKassa:    https://$DOMAIN/api/yookassa/webhook
+  1. Ключи ЮKassa:          nano $ETC/$APP.env   (потом: systemctl restart mantis-api)
+  2. Релиз:                 пуш в ветку prod – сервер выложит его сам в течение минуты
+                            (журнал: journalctl -u mantis-update -f)
+  3. Уведомления ЮKassa:    https://$DOMAIN/api/yookassa/webhook
 EOF

@@ -6,7 +6,9 @@
 //
 // Переменные окружения – см. deploy/mantis.env.example.
 
+import { readFileSync } from "node:fs";
 import { type IncomingMessage, type ServerResponse, createServer } from "node:http";
+import { join } from "node:path";
 import autorenew from "../api/billing/autorenew.js";
 import card from "../api/billing/card.js";
 import pay from "../api/billing/pay.js";
@@ -28,6 +30,15 @@ const ROUTES: Record<string, Handler> = {
 };
 
 const MAX_BODY = 1 << 20;
+
+/** Версия релиза (коммит) – файл version.txt рядом с server.cjs, кладёт сборка релиза. */
+const VERSION = (() => {
+  try {
+    return readFileSync(join(__dirname, "version.txt"), "utf8").trim();
+  } catch {
+    return "dev";
+  }
+})();
 
 function readBody(req: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -74,7 +85,7 @@ function sendJson(res: ServerResponse, status: number, data: unknown): void {
 
 async function serve(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const path = (req.url ?? "/").split("?")[0].replace(/\/+$/, "");
-  if (path === "/api/health") return sendJson(res, 200, { ok: true });
+  if (path === "/api/health") return sendJson(res, 200, { ok: true, version: VERSION });
   const h = ROUTES[path];
   if (!h) return sendJson(res, 404, { error: "Не найдено" });
   let body: Buffer;

@@ -1,11 +1,9 @@
 # Деплой в прод (mantis.rcmit.ru, VDS на 1Gb): пуш в ветку prod или запуск вручную (Actions → «Деплой в прод»).
 # Контур разработки – Vercel (ветка main), этот workflow его не трогает.
 #
-# Секреты репозитория (Settings → Secrets and variables → Actions):
-#   PROD_SSH_KEY          – закрытый ключ, открытый лежит в /var/www/mantis/.ssh/authorized_keys на сервере
-#   PROD_SSH_KNOWN_HOSTS  – вывод `ssh-keyscan -t ed25519 81.177.166.58`
-# Переменные (там же, вкладка Variables), необязательно:
-#   PROD_HOST – по умолчанию 81.177.166.58; PROD_URL – по умолчанию https://mantis.rcmit.ru
+# Схема без ключей и секретов: workflow собирает релиз и публикует его как GitHub Release (latest),
+# а сервер раз в минуту сам проверяет новый релиз, скачивает, сверяет sha256 и выкладывает
+# (mantis-update.timer, ставит deploy/setup-server.sh). Репозиторий публичный – серверу доступ не нужен.
 
 name: Деплой в прод
 
@@ -18,12 +16,13 @@ concurrency:
   group: deploy-prod
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: production
     env:
-      PROD_HOST: ${{ vars.PROD_HOST || '81.177.166.58' }}
       PROD_URL: ${{ vars.PROD_URL || 'https://mantis.rcmit.ru' }}
 
     services:
@@ -60,28 +59,37 @@ jobs:
 
       - name: Архив релиза
         run: |
-          mkdir -p release
+          mkdir -p release out
           cp -r dist release/dist
-          cp server/dist/server.cjs server/dist/server.cjs.map server/schema.sql release/
-          tar -czf "mantis-${GITHUB_SHA}.tar.gz" -C release .
-          ls -lh "mantis-${GITHUB_SHA}.tar.gz"
+          cp server/dist/server.cjs server/dist/server.cjs.map server/schema.sql deploy/remote-deploy.sh release/
+          echo "$GITHUB_SHA" > release/version.txt
+          tar -czf out/mantis.tar.gz -C release .
+          (cd out && sha256sum mantis.tar.gz > mantis.tar.gz.sha256)
+          echo "$GITHUB_SHA" > out/version.txt
+          ls -lh out
 
-      - name: SSH
+      - name: Публикация релиза
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/id_deploy
-          chmod 600 ~/.ssh/id_deploy
-          printf '%s\n' "${{ secrets.PROD_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
-          printf 'Host prod\n  HostName %s\n  User mantis\n  IdentityFile ~/.ssh/id_deploy\n  IdentitiesOnly yes\n' "$PROD_HOST" > ~/.ssh/config
+          TAG="prod-$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}"
+          gh release create "$TAG" out/mantis.tar.gz out/mantis.tar.gz.sha256 out/version.txt \
+            --target "$GITHUB_SHA" --latest --title "Прод $TAG" \
+            --notes "Релиз для mantis.rcmit.ru, коммит $GITHUB_SHA. Сервер подхватит его в течение минуты."
 
-      - name: Выкладка
+      - name: Ждём, пока сервер выложит релиз
         run: |
-          scp "mantis-${GITHUB_SHA}.tar.gz" deploy/remote-deploy.sh prod:/tmp/
-          ssh prod "bash /tmp/remote-deploy.sh /tmp/mantis-${GITHUB_SHA}.tar.gz ${GITHUB_SHA} && rm -f /tmp/remote-deploy.sh"
+          for i in $(seq 1 40); do
+            V=$(curl -fsS --max-time 5 "$PROD_URL/api/health" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' || true)
+            echo "попытка $i: на сервере ${V:-нет ответа}"
+            [ "$V" = "$GITHUB_SHA" ] && exit 0
+            sleep 15
+          done
+          echo "Сервер не выложил релиз за 10 минут – смотрите journalctl -u mantis-update на сервере"
+          exit 1
 
       - name: Проверка снаружи
         run: |
-          curl -fsS "$PROD_URL/api/health"
           curl -fsSI "$PROD_URL/" | tee /tmp/h.txt
           grep -qi '^cross-origin-embedder-policy: require-corp' /tmp/h.txt
           grep -qi '^cross-origin-opener-policy: same-origin' /tmp/h.txt
