@@ -141,7 +141,7 @@ export function Records(p: { param: string }) {
         <span class="privacy-ic"><IcShield size={20} color="#15803D" width={1.9} /></span>
         <div>
           <h2 id="privacy-h">Запись ведётся в графическом режиме – без лиц людей</h2>
-          <p>Mantis не сохраняет видео с камеры. В записи остаются только точки на плане, их маршруты и события: кто прошёл мимо, притормозил, посмотрел на витрину и зашёл. Узнать человека по такой записи нельзя.</p>
+          <p>Mantis не сохраняет видео с камеры. В записи остаются только точки на плане, их маршруты и события: кто прошёл мимо, заинтересовался, посмотрел на витрину и зашёл. Узнать человека по такой записи нельзя.</p>
         </div>
       </aside>
 
@@ -169,7 +169,7 @@ export function Records(p: { param: string }) {
               <span class="rec-clock">{clock}</span>
               {counts && (
                 <div class="rec-counters">
-                  {([["Прошли мимо", counts.passed, "#98A2B3"], ["Притормозили", counts.slowed, "#9CCDF0"], ["Посмотрели", counts.looked, "#4A9BD8"], ["Вернулись", counts.returned, "#EA580C"], ["Зашли", counts.entered, "#1E4A73"]] as [string, number, string][]).map(([l, v, col]) => (
+                  {([["Прошли мимо", counts.passed, "#98A2B3"], ["Заинтересовались", counts.slowed, "#9CCDF0"], ["Посмотрели", counts.looked, "#4A9BD8"], ["Вернулись", counts.returned, "#EA580C"], ["Зашли", counts.entered, "#1E4A73"]] as [string, number, string][]).map(([l, v, col]) => (
                     <span key={l}><i style={{ background: col }} /><span>{l}</span><b>{num(v)}</b></span>
                   ))}
                 </div>
@@ -203,7 +203,7 @@ export function Records(p: { param: string }) {
             </div>
             <div class="legend small-legend">
               <span><span class="lg-dot" style={{ background: "#98A2B3" }} />идёт мимо</span>
-              <span><span class="lg-dot" style={{ background: "#9CCDF0" }} />притормозил</span>
+              <span><span class="lg-dot" style={{ background: "#9CCDF0" }} />заинтересовался</span>
               <span><span class="lg-dot" style={{ background: "#4A9BD8" }} />смотрит на витрину</span>
               <span><span class="lg-dot" style={{ background: "#EA580C" }} />вернулся</span>
               <span><span class="lg-dot" style={{ background: "#1E4A73" }} />зашёл</span>

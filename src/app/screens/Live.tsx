@@ -48,7 +48,7 @@ export function Live() {
   const base = today.people || 1;
   const todayRows: [string, number, string][] = [
     ["Прошли мимо", today.people, "var(--r1)"],
-    ["Притормозили", today.slowed, "var(--r2)"],
+    ["Заинтересовались", today.slowed, "var(--r2)"],
     ["Посмотрели", today.looked, "var(--r3)"],
     ["Зашли", today.entered, "var(--r4)"],
     ["Вернулись", today.returned, "#C2410C"],
@@ -129,7 +129,7 @@ export function Live() {
                   </div>
                   <div class="legend">
                     <span><span class="lg-dot" style={{ background: "#98A2B3" }} />идёт мимо</span>
-                    <span><span class="lg-dot" style={{ background: "#9CCDF0", boxShadow: "0 0 0 2px #6DB2E6 inset" }} />притормозил</span>
+                    <span><span class="lg-dot" style={{ background: "#9CCDF0", boxShadow: "0 0 0 2px #6DB2E6 inset" }} />заинтересовался</span>
                     <span><span class="lg-dot" style={{ background: "#4A9BD8" }} />смотрит на витрину</span>
                     <span><span class="lg-dot" style={{ background: "#EA580C" }} />вернулся</span>
                     <span><span class="lg-dot" style={{ background: "#1E4A73" }} />зашёл</span>

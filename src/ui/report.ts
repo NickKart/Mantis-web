@@ -16,7 +16,7 @@ export function eventTitle(e: AnalyticsEvent): string {
     case "passed":
       return e.direction === "forward" ? "прошёл →" : "прошёл ←";
     case "slowed":
-      return "притормозил";
+      return "заинтересовался";
     case "looked":
       return "посмотрел";
     case "entered":

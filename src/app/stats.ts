@@ -99,10 +99,10 @@ export function funnel(t: HourStat, prev: HourStat | null): FunnelStep[] {
   const lookedBase = t.looked <= t.slowed && t.slowed > 0;
   return [
     { key: "people", label: "Прошли мимо", value: t.people, width: t.people > 0 ? 1 : 0, rate: "весь поток в зоне камеры", delta: d("people") },
-    { key: "slowed", label: "Притормозили", value: t.slowed, width: ratio(t.slowed, t.people), rate: `${pct(t.slowed, t.people)} от прошедших`, delta: d("slowed") },
+    { key: "slowed", label: "Заинтересовались", value: t.slowed, width: ratio(t.slowed, t.people), rate: `${pct(t.slowed, t.people)} от прошедших`, delta: d("slowed") },
     {
       key: "looked", label: "Посмотрели", value: t.looked, width: ratio(t.looked, t.people),
-      rate: lookedBase ? `${pct(t.looked, t.slowed)} от притормозивших` : `${pct(t.looked, t.people)} от прошедших`, delta: d("looked"),
+      rate: lookedBase ? `${pct(t.looked, t.slowed)} от заинтересовавшихся` : `${pct(t.looked, t.people)} от прошедших`, delta: d("looked"),
     },
     {
       key: "entered", label: "Зашли", value: t.entered, width: ratio(t.entered, t.people),
@@ -221,7 +221,7 @@ export function insights(o: {
         : `Доля посмотревших **${pct(t.looked, t.people)}** – ${d > 0 ? "больше" : "меньше"} на ${Math.abs(d).toFixed(1).replace(".", ",")} п.п., чем ${prevWord(o.period)}.`,
     };
   }
-  if (!attention) attention = { kind: "info", text: `На витрину смотрит **${pct(t.looked, t.people)}** прохожих, притормаживает – ${pct(t.slowed, t.people)}.` };
+  if (!attention) attention = { kind: "info", text: `На витрину смотрит **${pct(t.looked, t.people)}** прохожих, интересуется – ${pct(t.slowed, t.people)}.` };
   out.push(attention);
 
   // 2. Пик потока и лучший день
@@ -235,13 +235,13 @@ export function insights(o: {
 
   // 3. Где воронка теряет больше всего
   const steps: [string, number, string][] = [];
-  if (t.people > 0) steps.push(["«прошли мимо» и «притормозили»", ratio(t.slowed, t.people), "Витрину мало замечают: попробуйте свет, движение или крупный акцент на уровне глаз."]);
-  if (t.slowed > 0 && t.looked <= t.slowed) steps.push(["«притормозили» и «посмотрели»", ratio(t.looked, t.slowed), "Замечают, но не разглядывают: проверьте, читается ли оформление с 2–3 метров."]);
+  if (t.people > 0) steps.push(["«прошли мимо» и «заинтересовались»", ratio(t.slowed, t.people), "Витрину мало замечают: попробуйте свет, движение или крупный акцент на уровне глаз."]);
+  if (t.slowed > 0 && t.looked <= t.slowed) steps.push(["«заинтересовались» и «посмотрели»", ratio(t.looked, t.slowed), "Замечают, но не разглядывают: проверьте, читается ли оформление с 2–3 метров."]);
   if (t.looked > 0 && t.entered > 0) steps.push(["«посмотрели» и «зашли»", ratio(t.entered, t.looked), "Проверьте вход и навигацию: видна ли дверь, понятно ли, что открыто."]);
   const worst = steps.sort((a, b) => a[1] - b[1])[0];
   if (worst && worst[1] < 1) {
     const oneOf = worst[1] > 0 ? Math.max(2, Math.round(1 / worst[1])) : 0;
-    const share = worst[0].includes("зашли") ? `заходит 1 из ${oneOf}` : worst[0].includes("притормозили»") && worst[0].startsWith("«прошли") ? `притормаживает 1 из ${oneOf}` : `смотрит 1 из ${oneOf}`;
+    const share = worst[0].includes("зашли") ? `заходит 1 из ${oneOf}` : worst[0].includes("заинтересовались»") && worst[0].startsWith("«прошли") ? `интересуется 1 из ${oneOf}` : `смотрит 1 из ${oneOf}`;
     out.push({ kind: "warn", text: `Больше всего теряем между ${worst[0]}${oneOf ? `: ${share}` : ""}. ${worst[2]}` });
   }
   return out;

@@ -1,6 +1,6 @@
 // «Как начать работать»: четыре шага по реальному состоянию и что появится в аналитике.
 import { num } from "../format";
-import { IcApple, IcArrow, IcCam, IcCheck, IcFunnel, IcLive, IcPlug, IcUser, IcWindows } from "../icons";
+import { IcArrow, IcCam, IcCheck, IcFunnel, IcLive, IcUser } from "../icons";
 import { MIN_PEOPLE, onboarding } from "../progress";
 import { Bar, type Screen, go, useCore } from "../ui";
 
@@ -35,7 +35,7 @@ export function Onboarding() {
   const doneCount = ob.done.filter(Boolean).length;
   const preview: [string, number, string, string][] = [
     ["Прошли мимо", today.people, "var(--r1)", "весь поток у витрины"],
-    ["Притормозили", today.slowed, "var(--r2)", "насколько витрина заметна"],
+    ["Заинтересовались", today.slowed, "var(--r2)", "насколько витрина заметна"],
     ["Посмотрели", today.looked, "var(--r3)", "насколько оформление цепляет"],
     ["Зашли", today.entered, "var(--r4)", "сколько внимания стало визитами"],
   ];
@@ -114,22 +114,6 @@ export function Onboarding() {
           ))}
         </div>
       </section>
-
-      <aside class="onb-note" aria-labelledby="cams-note-h">
-        <span class="onb-note-ic"><IcPlug size={20} color="#3A4456" /></span>
-        <div class="onb-note-text">
-          <h2 id="cams-note-h">{c.bridge ? "IP-камеры подключены через Mantis Агент" : "IP-камеры – через Mantis Агент"}</h2>
-          <p>{c.bridge
-            ? "Эту страницу открыл Mantis Агент на компьютере у витрины: в «Настройке камеры» можно найти IP-, Wi-Fi- и LAN-камеры в сети, а также подключить камеру ноутбука или USB."
-            : "Камера ноутбука, телефон или USB-камера работают прямо в браузере. Чтобы подключить IP-, Wi-Fi- или LAN-камеры, скачайте Mantis Агент – программу для компьютера у витрины: она откроет эту же страницу и найдёт камеры в сети."}</p>
-        </div>
-        {!c.bridge && (
-          <div class="onb-dl">
-            <a class="btn lg" href={AGENT_LINKS.windows} aria-label="Скачать для Windows" download><IcWindows />Скачать</a>
-            <a class="btn lg" href={AGENT_LINKS.mac} aria-label="Скачать для macOS" download><IcApple />Скачать</a>
-          </div>
-        )}
-      </aside>
     </main>
   );
 }

@@ -236,7 +236,7 @@ export function VideoCheck() {
   const people = rep ? rep.metrics.people : live.passed;
   const result: [string, number, string, string][] = rep ? [
     ["Прошли мимо", rep.metrics.people, "var(--r1)", "людей в зоне камеры"],
-    ["Притормозили", rep.counters.slowed, "var(--r2)", `${pct(rep.counters.slowed, people)} от прошедших`],
+    ["Заинтересовались", rep.counters.slowed, "var(--r2)", `${pct(rep.counters.slowed, people)} от прошедших`],
     ["Посмотрели", rep.counters.looked, "var(--r3)", `${pct(rep.counters.looked, people)} от прошедших`],
     ["Зашли", rep.entered ?? 0, "var(--r4)", rep.entered === null ? "линия входа не задана" : `${pct(rep.entered, people)} от прошедших · ${pct(rep.entered, rep.counters.looked)} от посмотревших`],
     ["Вернулись", rep.returned, "#C2410C", `${pct(rep.returned, people)} от прошедших`],
@@ -262,7 +262,7 @@ export function VideoCheck() {
           <>
             <div class="setup-intro">
               <h1>Проверка на видеофайле</h1>
-              <p class="lead">Перетащите ролик с телефона или камеры – Mantis разберёт его так же, как живую камеру: сколько прошло мимо, притормозило, посмотрело, зашло и вернулось. Видео никуда не отправляется.</p>
+              <p class="lead">Перетащите ролик с телефона или камеры – Mantis разберёт его так же, как живую камеру: сколько прошло мимо, заинтересовалсяо, посмотрело, зашло и вернулось. Видео никуда не отправляется.</p>
             </div>
             <label class={`drop ${drag ? "over" : ""}`}
               onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
@@ -345,7 +345,7 @@ export function VideoCheck() {
                 <>
                   <span class="panel-title">Идёт анализ · {Math.round(progress * 100)}%</span>
                   <div class="today-list" style={{ borderTop: 0, paddingTop: 0 }}>
-                    {([["Прошли мимо", live.passed], ["Притормозили", live.slowed], ["Посмотрели", live.looked], ["Зашли", live.entered], ["Вернулись", live.returned]] as [string, number][]).map(([l, n]) => (
+                    {([["Прошли мимо", live.passed], ["Заинтересовались", live.slowed], ["Посмотрели", live.looked], ["Зашли", live.entered], ["Вернулись", live.returned]] as [string, number][]).map(([l, n]) => (
                       <div key={l} class="today-row"><span>{l}</span><span /><b>{num(n)}</b></div>
                     ))}
                   </div>

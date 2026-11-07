@@ -146,8 +146,8 @@ export function Compare(p: { param: string }) {
         aN: `${num(fa)} ${flowWord}`, bN: `${num(fb)} ${flowWord}`, d: fa > 0 ? `${fr > 0 ? "+" : fr < 0 ? "−" : ""}${Math.abs(fr)}% ${flowWord}` : "–",
         tone: Math.abs(flowD) < 5 ? "flat" : flowD > 0 ? "up" : "down", wA: fa / (Math.max(fa, fb) || 1), wB: fb / (Math.max(fa, fb) || 1),
       },
-      row("Притормозили", "от прошедших", sa.slow, sb.slow, num(A.slowed), num(B.slowed)),
-      row("Посмотрели", "от притормозивших", sa.look, sb.look, num(A.looked), num(B.looked)),
+      row("Заинтересовались", "от прошедших", sa.slow, sb.slow, num(A.slowed), num(B.slowed)),
+      row("Посмотрели", "от заинтересовавшихся", sa.look, sb.look, num(A.looked), num(B.looked)),
       row("Вернулись", "от прошедших", sa.ret, sb.ret, num(A.returned), num(B.returned)),
       row("Зашли", "от прошедших", sa.enter, sb.enter, num(A.entered), num(B.entered)),
       row("Зашли", "от посмотревших", sa.enterLook, sb.enterLook, num(A.entered), num(B.entered)),
@@ -160,7 +160,7 @@ export function Compare(p: { param: string }) {
     if (score > 2) title = `${q(sideB!.title)} работает лучше: витрину чаще замечают и разглядывают`;
     if (score < -2) title = `${q(sideA!.title)} работает лучше: в ${q(sideB!.title).replace(/^Витрина /, "витрине ")} витрину замечают реже`;
     const enterText = Math.abs(dE) < 0.05 ? "доля зашедших не изменилась" : `доля зашедших ${dE > 0 ? "выросла" : "снизилась"} на ${Math.abs(dE).toFixed(1).replace(".", ",")} п.п.`;
-    let text = `В ${mode === "rec" ? "записи" : "периоде"} B притормозивших ${more(dS)}, посмотревших – ${more(dL)}, а ${enterText}.`;
+    let text = `В ${mode === "rec" ? "записи" : "периоде"} B заинтересовавшихся ${more(dS)}, посмотревших – ${more(dL)}, а ${enterText}.`;
     if (dE < -0.5 && score > 0) text += " Витрина привлекает, а вход не дожимает – стоит проверить дверь и вывеску.";
     if (dE > 0.5 && score < 0) text += " Заходят чаще, хотя витрину замечают реже – возможно, сработал вход или акция у двери.";
     verdict = { title, text };

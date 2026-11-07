@@ -55,7 +55,7 @@ function SetupHome() {
       <header class="page-head">
         <div class="titles">
           <h1>Настройка камеры</h1>
-          <p class="lead">Камеры этой точки и план. Для каждой камеры один раз отмечаются витрина, линия прохода и вход – по этой разметке Mantis понимает, кто притормозил, посмотрел и зашёл.</p>
+          <p class="lead">Камеры этой точки и план. Для каждой камеры один раз отмечаются витрина, линия прохода и вход – по этой разметке Mantis понимает, кто заинтересовался, посмотрел и зашёл.</p>
         </div>
         <button class="btn primary lg" onClick={() => go("setup", "new")}><IcPlus size={16} width={2} />Добавить камеру</button>
       </header>
@@ -348,7 +348,7 @@ function MarkupStep(p: { ch: Channel }) {
     <div class="setup-body">
       <div class="setup-intro">
         <h1>Разметка кадра</h1>
-        <p class="lead">Здесь вы показываете Mantis, где на кадре витрина, где люди проходят мимо и где вход в магазин. По этой разметке система понимает, кто притормозил, посмотрел и зашёл. Делается один раз для каждой камеры.</p>
+        <p class="lead">Здесь вы показываете Mantis, где на кадре витрина, где люди проходят мимо и где вход в магазин. По этой разметке система понимает, кто заинтересовался, посмотрел и зашёл. Делается один раз для каждой камеры.</p>
       </div>
       <div class="setup-grid">
         <section class="setup-frame" aria-label="Кадр камеры">
@@ -559,7 +559,7 @@ function CheckStep(p: { ch: Channel }) {
           </div>
           <div class="check-counters">
             {([
-              ["В кадре", fr?.boxes ?? 0], ["Прошли", fr?.counters.passed ?? 0], ["Притормозили", fr?.counters.slowed ?? 0],
+              ["В кадре", fr?.boxes ?? 0], ["Прошли", fr?.counters.passed ?? 0], ["Заинтересовались", fr?.counters.slowed ?? 0],
               ["Посмотрели", fr?.counters.looked ?? 0], ["Зашли", fr?.entered ?? 0], ["Вернулись", fr?.returned ?? 0],
             ] as [string, number][]).map(([t, n]) => <div key={t}><b>{num(n)}</b><span>{t}</span></div>)}
           </div>
@@ -574,7 +574,7 @@ function CheckStep(p: { ch: Channel }) {
             <span class="small muted">{LEVEL_HINTS[f.level]}</span>
           </div>
           <div class="field">
-            <span class="panel-title">Строгость «посмотрел / притормозил»</span>
+            <span class="panel-title">Строгость «посмотрел / заинтересовался»</span>
             <Seg label="Строгость" value={f.behavior} options={BEHAVIOR_TITLES.map((t, i) => [i, t] as [number, string])} onChange={(b) => setF({ ...f, behavior: b })} />
             <span class="small muted">{BEHAVIOR_HINTS[f.behavior]}</span>
           </div>

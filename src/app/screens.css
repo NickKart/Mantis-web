@@ -29,11 +29,6 @@
 .pv-label { font-size: 13px; font-weight: 500; color: var(--ink-2); }
 .pv-value { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; }
 .pv-hint { font-size: 12px; color: var(--muted); line-height: 1.45; }
-.onb-note { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding: 20px 24px; border-radius: 16px; border: 1px solid var(--line); background: #FFFFFF; }
-.onb-note-ic { flex: 0 0 40px; height: 40px; border-radius: 10px; background: var(--track); display: flex; align-items: center; justify-content: center; }
-.onb-note-text { flex: 1 1 420px; display: flex; flex-direction: column; gap: 4px; }
-.onb-note-text h2 { font-size: 15px; font-weight: 600; }
-.onb-note-text p { font-size: 14px; line-height: 1.5; color: var(--ink-2); }
 .onb-dl { display: flex; flex-wrap: wrap; gap: 8px; }
 .onb-dl .btn { gap: 10px; font-weight: 600; }
 /* все четыре шага в одну строку на любом широком экране (16:9, 16:10); на узких – ниже, в столбик */
