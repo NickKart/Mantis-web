@@ -9,14 +9,14 @@
 .onb-track { display: block; height: 6px; background: #DCE2EC; border-radius: 3px; overflow: hidden; }
 .onb-track span { display: block; height: 6px; background: var(--accent); border-radius: 3px; transition: width 0.3s ease; }
 .onb-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-@media (max-width: 1360px) { .onb-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .onb-step { display: flex; flex-direction: column; gap: 14px; padding: 24px; border-radius: 16px; background: #FFFFFF; border: 1px solid var(--line); min-height: 260px; }
 .onb-step.hl { border: 2px solid var(--focus); box-shadow: 0 8px 24px rgba(31, 41, 55, 0.08); padding: 23px; }
 .onb-step-top { display: flex; align-items: center; gap: 12px; }
 .onb-num { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line-3); color: var(--muted); font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
 .onb-num.on { background: var(--accent-soft); color: var(--accent-ink); border: 0; }
 .onb-num.done { background: var(--ok-bg); border: 0; }
-.onb-time { font-size: 13px; color: var(--muted); }
+.onb-stepno { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.onb-time { font-size: 13px; color: var(--muted); margin-left: auto; white-space: nowrap; }
 .onb-menu { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border-radius: 8px; background: var(--soft); align-self: flex-start; font-size: 13px; font-weight: 500; color: var(--ink-2); }
 .onb-text { display: flex; flex-direction: column; gap: 8px; }
 .onb-text h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
@@ -36,6 +36,14 @@
 .onb-note-text p { font-size: 14px; line-height: 1.5; color: var(--ink-2); }
 .onb-dl { display: flex; flex-wrap: wrap; gap: 8px; }
 .onb-dl .btn { gap: 10px; font-weight: 600; }
+/* все четыре шага в одну строку на любом широком экране (16:9, 16:10); на узких – ниже, в столбик */
+@media (max-width: 1440px) {
+  .main.onb { padding-left: 32px; padding-right: 32px; }
+  .onb-steps { gap: 12px; }
+  .onb-step { padding: 18px; }
+  .onb-step.hl { padding: 17px; }
+  .onb-text h2 { font-size: 17px; }
+}
 @media (max-width: 960px) {
   .onb-steps { grid-template-columns: 1fr; }
   .onb-step { min-height: 0; }

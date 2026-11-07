@@ -9,8 +9,8 @@ export const AGENT_LINKS = { windows: "downloads/Mantis-Agent-Windows.zip", mac:
 
 const STEPS: { title: string; time: string; cta: string; doneText: string; text: string; menu: string; Icon: typeof IcCam; screen: Screen }[] = [
   {
-    title: "Зарегистрируйтесь в приложении", time: "≈ 1 минута", cta: "Зарегистрироваться", doneText: "Вход выполнен", menu: "Вход и Регистрация", Icon: IcUser, screen: "start",
-    text: "Создайте аккаунт по почте и паролю. Статистика будет сохраняться в облаке, и её можно смотреть с любого устройства.",
+    title: "Зарегистрируйтесь в приложении", time: "≈ 3 минуты", cta: "Зарегистрироваться", doneText: "Вход выполнен", menu: "Вход и Регистрация", Icon: IcUser, screen: "start",
+    text: "Создайте аккаунт по почте и паролю. Вам станут доступны все функции приложения.",
   },
   {
     title: "Настройте камеру", time: "≈ 5 минут", cta: "Настроить камеру", doneText: "Камера настроена", menu: "Настройка камеры", Icon: IcCam, screen: "setup",
@@ -73,6 +73,7 @@ export function Onboarding() {
                 {done
                   ? <span class="onb-num done"><IcCheck size={16} color="#15803D" width={3} /></span>
                   : <span class={`onb-num ${hl ? "on" : ""}`}>{i + 1}</span>}
+                <span class="onb-stepno">{i + 1}-й шаг</span>
                 <span class="onb-time">{s.time}</span>
               </div>
               <div class="onb-menu"><s.Icon size={16} color="#3A4456" /><span>{s.menu}</span></div>
