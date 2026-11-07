@@ -9,6 +9,8 @@
 
 Выкатить в прод: влить изменения в `prod` (`git push origin main:prod`) или Actions → «Деплой в прод» → Run workflow.
 
+Как идёт релиз: GitHub Actions прогоняет тесты, собирает фронт и сервер API и публикует архив как GitHub Release (latest) с контрольной суммой. Сервер раз в минуту сам проверяет последний релиз (`mantis-update.timer`), скачивает, сверяет sha256 и выкладывает. Ключи и секреты не нужны: репозиторий публичный, сервер ничего не принимает извне. Workflow ждёт, пока `/api/health` покажет новый коммит, и проверяет заголовки.
+
 ## Как устроено на сервере
 
 - **nginx** раздаёт фронт из `/var/www/mantis/current/dist` с заголовками COOP/COEP (без них браузер выключает многопоточность у модели) и проксирует `/api/*` на `127.0.0.1:3100`. Конфиг – `/etc/nginx/sites-available/mantis.rcmit.ru.conf`, общие заголовки – `/etc/nginx/snippets/mantis-headers.conf`. Конфиг rcmit.ru (`rcmit.conf`) не трогаем.
@@ -16,6 +18,7 @@
 - **mantis-charge.timer** – продление подписок каждый день в 06:00 МСК (`node server.cjs charge`). Вместо Vercel Cron; наружу `/api/cron/charge` не открыт.
 - **mantis-backup.timer** – `pg_dump` каждую ночь в 03:30 МСК в `/var/backups/mantis`, хранится 14 дней. Копию вне сервера настройте через rclone в российское хранилище (Yandex Object Storage, Selectel) – см. комментарий в `/usr/local/bin/mantis-backup`.
 - **PostgreSQL** – база и роль `mantis`, вход по сокету без пароля (пользователь ОС `mantis`), снаружи недоступна. Схема – `server/schema.sql`, применяется при каждом деплое.
+- **mantis-update.timer** – раз в минуту `/usr/local/bin/mantis-update`: новый релиз на GitHub → скачать, сверить sha256, выложить (`remote-deploy.sh` из архива). Неудачный релиз помечается в `/var/www/mantis/state` и больше не пробуется – выпустите исправленный.
 - **Релизы** – `/var/www/mantis/releases/<sha>`, `current` – ссылка на текущий. Хранятся последние 5. Если после деплоя API не ответил на `/api/health`, скрипт возвращает предыдущий релиз.
 - **Let's Encrypt** – certbot продлевает сертификат сам и перезагружает nginx.
 
@@ -28,18 +31,9 @@
    curl -fsSL https://raw.githubusercontent.com/NickKart/mantis-web/main/deploy/setup-server.sh | bash -s -- mantis.rcmit.ru почта@для-letsencrypt
    ```
 3. **Ключи ЮKassa** – в `/etc/mantis/mantis.env` (`YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY`, при необходимости `YOOKASSA_AUTOPAY`, `YOOKASSA_VAT_CODE`). Для прода – боевой магазин, для Vercel – тестовый.
-4. **Ключ автодеплоя.** На Mac:
-   ```bash
-   ssh-keygen -t ed25519 -f ~/.ssh/mantis_deploy -N "" -C "github-actions mantis"
-   ssh root@81.177.166.58 "cat >> /var/www/mantis/.ssh/authorized_keys" < ~/.ssh/mantis_deploy.pub
-   ssh-keyscan -t ed25519 81.177.166.58
-   ```
-   В GitHub → Settings → Secrets and variables → Actions:
-   - `PROD_SSH_KEY` – содержимое `~/.ssh/mantis_deploy` (закрытый ключ);
-   - `PROD_SSH_KNOWN_HOSTS` – вывод `ssh-keyscan`.
-5. **Первый деплой:** `git push origin main:prod`.
-6. **ЮKassa** (боевой магазин) → Интеграция → HTTP-уведомления → `https://mantis.rcmit.ru/api/yookassa/webhook`, события `payment.succeeded`, `payment.canceled`, `payment_method.active`.
-7. **Firebase** → Authentication → Settings → Authorized domains → добавить `mantis.rcmit.ru`. Если у ключа API в Google Cloud стоят ограничения по сайтам – добавить и его.
+4. **Первый деплой:** `git push origin main:prod` – сервер выложит релиз в течение минуты.
+5. **ЮKassa** (боевой магазин) → Интеграция → HTTP-уведомления → `https://mantis.rcmit.ru/api/yookassa/webhook`, события `payment.succeeded`, `payment.canceled`, `payment_method.active`.
+6. **Firebase** → Authentication → Settings → Authorized domains → добавить `mantis.rcmit.ru`. Если у ключа API в Google Cloud стоят ограничения по сайтам – добавить и его.
 
 ## Обслуживание
 
@@ -49,6 +43,8 @@ journalctl -u mantis-api -f                 # логи API
 journalctl -u mantis-charge --since today   # что списалось сегодня
 systemctl start mantis-charge               # продлить подписки вручную
 systemctl list-timers 'mantis-*'            # когда следующий запуск
+journalctl -u mantis-update --since today   # какие релизы выкладывались
+rm /var/www/mantis/state/failed-<sha>       # повторить выкладку неудачного релиза
 sudo -u mantis psql mantis                  # база
 systemctl start mantis-backup               # бэкап вручную
 ```
