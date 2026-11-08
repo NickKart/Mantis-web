@@ -55,7 +55,7 @@ jobs:
         run: |
           app="$(ls -d desktop/macos/src-tauri/target/*/release/bundle/macos/Mantis.app | head -1)"
           codesign --verify --deep --strict --verbose=2 "$app"
-          lipo -archs "$app/Contents/MacOS/mantis" "$app/Contents/MacOS/mantis-agent"
+          for f in mantis mantis-agent; do echo "$f: $(lipo -archs "$app/Contents/MacOS/$f")"; done
           /usr/libexec/PlistBuddy -c "Print :NSCameraUsageDescription" "$app/Contents/Info.plist"
 
       - name: Проверка запуска встроенного Агента
