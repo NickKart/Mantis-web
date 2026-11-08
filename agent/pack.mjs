@@ -1,6 +1,7 @@
 // Упаковать собранную страницу (dist/) в один файл для агента: [4 байта длина JSON][JSON-оглавление][данные].
 // Bun встраивает в исполняемый файл только отдельные файлы, поэтому вся папка идёт одним архивом.
 //   node agent/pack.mjs dist agent/build/assets.bin
+// В агент не берём старую версию для A/B-теста сайта (b/), отчёт теста (ab.html) и папку загрузок.
 
 import { readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -14,7 +15,10 @@ function walk(dir) {
   });
 }
 
-const files = walk(src).sort();
+const SKIP = [/^b\//, /^ab\.html$/, /^downloads\//];
+const files = walk(src)
+  .filter((f) => !SKIP.some((r) => r.test(relative(src, f).split("\\").join("/"))))
+  .sort();
 const index = [];
 const chunks = [];
 let offset = 0;
