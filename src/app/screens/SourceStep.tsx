@@ -150,6 +150,7 @@ function IpPick(p: { config: ChannelConfig | null; onNext: SourceStepNext }) {
           <a class="btn lg" href={AGENT_LINKS.windows} download><IcWindows />Скачать для Windows</a>
           <a class="btn lg" href={AGENT_LINKS.mac} download><IcApple />Скачать для macOS</a>
         </div>
+        <p class="muted">Mac на процессоре Intel – <a href={AGENT_LINKS.macIntel} download>отдельная сборка</a>. После распаковки откройте «Как запустить.txt».</p>
       </section>
     );
   }

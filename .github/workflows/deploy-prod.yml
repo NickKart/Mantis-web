@@ -4,6 +4,10 @@
 # Схема без ключей и секретов: workflow собирает релиз и публикует его как GitHub Release (latest),
 # а сервер раз в минуту сам проверяет новый релиз, скачивает, сверяет sha256 и выкладывает
 # (mantis-update.timer, ставит deploy/setup-server.sh). Репозиторий публичный – серверу доступ не нужен.
+#
+# Mantis Агент (IP-камеры) собирается на macOS-машине (там есть codesign для подписи .app) для Mac (Apple Silicon,
+# Intel) и Windows и прикладывается к тому же релизу. Сервер забирает архивы в /var/www/mantis/shared/downloads –
+# на них ведут кнопки «Скачать» (https://mantis.rcmit.ru/downloads/...). Если Агент не собрался, сайт всё равно выкладывается.
 
 name: Деплой в прод
 
@@ -20,8 +24,39 @@ permissions:
   contents: write
 
 jobs:
+  agent:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Сборка Mantis Агента (macOS arm64, macOS x64, Windows)
+        run: |
+          npm ci --ignore-scripts
+          BUN="$(command -v bun)" bash agent/build.sh darwin-arm64 darwin-x64 windows-x64
+          cd agent/dist && shasum -a 256 Mantis-Agent-*.zip > agent.sha256 && cat agent.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agent
+          path: |
+            agent/dist/Mantis-Agent-*.zip
+            agent/dist/agent.sha256
+          retention-days: 3
+
   deploy:
     runs-on: ubuntu-latest
+    needs: agent
+    # Агент не собрался – сайт всё равно выкладываем (старые архивы Агента на сервере остаются)
+    if: ${{ !cancelled() }}
     env:
       PROD_URL: ${{ vars.PROD_URL || 'https://mantis.rcmit.ru' }}
 
@@ -61,11 +96,25 @@ jobs:
           npm run build
           npm run build:server
 
+      - name: Архивы Mantis Агента
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: agent
+          path: agent-out
+
       - name: Архив релиза
         run: |
           mkdir -p release out
           cp -r dist release/dist
           cp server/dist/server.cjs server/dist/server.cjs.map server/schema.sql deploy/remote-deploy.sh release/
+          # список архивов Агента с sha256 – по нему сервер забирает их из релиза
+          if [ -f agent-out/agent.sha256 ]; then
+            cp agent-out/agent.sha256 release/agent.sha256
+            cp agent-out/Mantis-Agent-*.zip out/
+          else
+            echo "::warning::Агент не собран – кнопки «Скачать» будут вести на прежние архивы"
+          fi
           echo "$GITHUB_SHA" > release/version.txt
           tar -czf out/mantis.tar.gz -C release .
           (cd out && sha256sum mantis.tar.gz > mantis.tar.gz.sha256)
@@ -77,7 +126,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="prod-$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}"
-          gh release create "$TAG" out/mantis.tar.gz out/mantis.tar.gz.sha256 out/version.txt \
+          AGENT=$(ls out/Mantis-Agent-*.zip 2>/dev/null || true)
+          gh release create "$TAG" out/mantis.tar.gz out/mantis.tar.gz.sha256 out/version.txt $AGENT \
             --target "$GITHUB_SHA" --latest --title "Прод $TAG" \
             --notes "Релиз для mantis.rcmit.ru, коммит $GITHUB_SHA. Сервер подхватит его в течение минуты."
 
