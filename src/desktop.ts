@@ -1,5 +1,5 @@
-// Настольная оболочка Mantis (Windows, Tauri): страница та же, но открыта внутри приложения.
-// Оболочка открывает страницу с ?desktop=windows и даёт несколько команд через IPC Tauri:
+// Настольная оболочка Mantis (Windows и macOS, Tauri): страница та же, но открыта внутри приложения.
+// Оболочка открывает страницу с ?desktop=windows или ?desktop=macos и даёт несколько команд через IPC Tauri:
 // запрет сна, автозапуск при входе в систему, сведения о компьютере, выход.
 // В обычном браузере всё это недоступно – функции возвращают null / false.
 
@@ -12,19 +12,23 @@ interface TauriInternals {
 const params = new URLSearchParams(location.search);
 const FLAG = "mantis.desktop";
 
-/** Название платформы оболочки: "windows" или null (обычный браузер). */
+/** Название платформы оболочки: "windows", "macos" или null (обычный браузер). */
 export const desktopShell: string | null = (() => {
   const q = params.get("desktop");
   try {
     // запоминаем: после перезагрузки страницы без параметра (F5) режим остаётся
     if (q) sessionStorage.setItem(FLAG, q);
-    return q ?? sessionStorage.getItem(FLAG) ?? (hasIpc() ? "windows" : null);
+    return q ?? sessionStorage.getItem(FLAG) ?? (hasIpc() ? ipcPlatform() : null);
   } catch {
-    return q ?? (hasIpc() ? "windows" : null);
+    return q ?? (hasIpc() ? ipcPlatform() : null);
   }
 })();
 
 export const isDesktop = desktopShell !== null;
+
+function ipcPlatform(): string {
+  return /Mac/i.test(navigator.platform || navigator.userAgent) ? "macos" : "windows";
+}
 
 function hasIpc(): boolean {
   return typeof (window as unknown as { __TAURI_INTERNALS__?: TauriInternals }).__TAURI_INTERNALS__?.invoke === "function";
@@ -45,6 +49,8 @@ export interface DesktopInfo {
   version: string;
   hostname: string;
   autostart: boolean;
+  /** Версия системы, например «macOS 26.1 (arm64)» – сообщает оболочка для Mac. */
+  os?: string;
 }
 
 export function desktopInfo(): Promise<DesktopInfo | null> {

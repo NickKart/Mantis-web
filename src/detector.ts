@@ -49,6 +49,18 @@ export class Detector {
     throw lastError ?? new Error("Нейросеть не загрузилась");
   }
 
+  /** Загрузить нейросеть строго в одном варианте, без перебора (страница проверки desktop-check.html). */
+  static async createExact(preferGpu: boolean, threads: number, onStatus?: (s: string) => void): Promise<Detector> {
+    const d = new Detector();
+    try {
+      await d.init(preferGpu, threads, onStatus);
+      return d;
+    } catch (e) {
+      d.dispose();
+      throw e;
+    }
+  }
+
   private init(preferGpu: boolean, threads: number, onStatus?: (s: string) => void): Promise<void> {
     const base = new URL(import.meta.env.BASE_URL, location.href);
     // Время на каждый этап: скачивание модели – дольше, создание сессии – меньше

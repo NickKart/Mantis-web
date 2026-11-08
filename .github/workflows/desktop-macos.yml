@@ -1,0 +1,96 @@
+# Mantis для macOS: сборка настольного приложения (.dmg) для Apple Silicon и Intel.
+# Запуск: пуш в ветку desktop-macos или вручную (Actions → «Mantis для macOS» → Run workflow).
+# Результат – предварительный релиз GitHub (prerelease) с файлами Mantis-macOS-arm64.dmg и Mantis-macOS-x64.dmg.
+# Prerelease не помечается «latest», поэтому прод-сервер (mantis-update.timer) его не трогает.
+
+name: Mantis для macOS
+
+on:
+  push:
+    branches: [desktop-macos]
+  workflow_dispatch:
+
+concurrency:
+  group: desktop-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x64]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/macos/src-tauri -> target
+          key: ${{ matrix.arch }}
+
+      - name: Зависимости
+        run: npm ci --ignore-scripts
+
+      - name: Сборка
+        run: bash desktop/macos/build.sh ${{ matrix.arch }}
+
+      - name: Проверка подписи
+        run: |
+          app="$(ls -d desktop/macos/src-tauri/target/*/release/bundle/macos/Mantis.app | head -1)"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          lipo -archs "$app/Contents/MacOS/mantis" "$app/Contents/MacOS/mantis-agent"
+          /usr/libexec/PlistBuddy -c "Print :NSCameraUsageDescription" "$app/Contents/Info.plist"
+
+      - name: Проверка запуска встроенного Агента
+        if: matrix.arch == 'arm64'
+        run: |
+          app="$(ls -d desktop/macos/src-tauri/target/*/release/bundle/macos/Mantis.app | head -1)"
+          MANTIS_SHELL=macos MANTIS_PORT=8797 "$app/Contents/MacOS/mantis-agent" --no-browser > agent.out 2>&1 &
+          for i in $(seq 1 60); do grep -q MANTIS_READY agent.out && break; sleep 1; done
+          cat agent.out
+          curl -fsS http://127.0.0.1:8797/api/agent
+          curl -fsSI http://127.0.0.1:8797/desktop-check.html | grep -i '^cross-origin-embedder-policy: require-corp'
+          kill %1 || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mantis-macOS-${{ matrix.arch }}
+          path: desktop/macos/out/Mantis-macOS-${{ matrix.arch }}.dmg
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Предварительный релиз
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="macos-v$VERSION-$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}"
+          (cd out && shasum -a 256 *.dmg > SHA256SUMS.txt)
+          gh release create "$TAG" out/*.dmg out/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --prerelease --latest=false --title "Mantis для macOS $VERSION (проверка)" \
+            --notes "Сборка для проверки на Mac. Apple Silicon (M1 и новее) – Mantis-macOS-arm64.dmg, Intel – Mantis-macOS-x64.dmg. Без подписи Apple: при первом запуске – «Системные настройки» → «Конфиденциальность и безопасность» → «Всё равно открыть»."
