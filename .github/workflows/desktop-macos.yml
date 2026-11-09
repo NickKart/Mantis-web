@@ -1,6 +1,8 @@
-# Mantis для macOS: сборка настольного приложения (.dmg) для Apple Silicon и Intel.
+# Mantis для macOS: одна сборка для всех Mac (Apple Silicon и Intel).
 # Запуск: пуш в ветку desktop-macos или вручную (Actions → «Mantis для macOS» → Run workflow).
-# Результат – предварительный релиз GitHub (prerelease) с файлами Mantis-macOS-arm64.dmg и Mantis-macOS-x64.dmg.
+# Результат – предварительный релиз GitHub (prerelease):
+#   Mantis-Installer.pkg – мастер установки (двойной клик → «Установить» → Mantis в «Программах» и запущен);
+#   Mantis.dmg – то же приложение в образе диска.
 # Prerelease не помечается «latest», поэтому прод-сервер (mantis-update.timer) его не трогает.
 
 name: Mantis для macOS
@@ -19,10 +21,6 @@ permissions:
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [arm64, x64]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,79 +41,61 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: desktop/macos/src-tauri -> target
-          key: ${{ matrix.arch }}
+          key: universal
 
       - name: Зависимости
         run: npm ci --ignore-scripts
 
       - name: Сборка
-        run: bash desktop/macos/build.sh ${{ matrix.arch }}
+        run: bash desktop/macos/build.sh universal
 
-      - name: Проверка подписи
+      - name: Проверка приложения
         run: |
-          app="$(ls -d desktop/macos/src-tauri/target/*/release/bundle/macos/Mantis.app | head -1)"
+          app=desktop/macos/src-tauri/target/universal-apple-darwin/release/bundle/macos/Mantis.app
           codesign --verify --deep --strict --verbose=2 "$app"
-          for f in mantis mantis-agent; do echo "$f: $(lipo -archs "$app/Contents/MacOS/$f")"; done
+          for f in mantis mantis-agent; do
+            a="$(lipo -archs "$app/Contents/MacOS/$f")"; echo "$f: $a"
+            [[ "$a" == *x86_64* && "$a" == *arm64* ]]
+          done
           /usr/libexec/PlistBuddy -c "Print :NSCameraUsageDescription" "$app/Contents/Info.plist"
 
-      - name: Проверка запуска встроенного Агента
-        if: matrix.arch == 'arm64'
+      - name: Установка из .pkg
         run: |
-          app="$(ls -d desktop/macos/src-tauri/target/*/release/bundle/macos/Mantis.app | head -1)"
-          MANTIS_SHELL=macos MANTIS_PORT=8797 "$app/Contents/MacOS/mantis-agent" --no-browser > agent.out 2>&1 &
+          pkgutil --payload-files desktop/macos/out/Mantis-Installer.pkg | head -5
+          sudo installer -pkg desktop/macos/out/Mantis-Installer.pkg -target / -verboseR | tail -5
+          test -x /Applications/Mantis.app/Contents/MacOS/mantis
+          defaults read /Applications/Mantis.app/Contents/Info CFBundleShortVersionString
+          codesign --verify --deep --strict /Applications/Mantis.app
+          # повторная установка поверх – как обновление
+          sudo installer -pkg desktop/macos/out/Mantis-Installer.pkg -target / | tail -1
+
+      - name: Запуск встроенного Агента (Apple Silicon)
+        run: |
+          agent=/Applications/Mantis.app/Contents/MacOS/mantis-agent
+          MANTIS_SHELL=macos MANTIS_PORT=8797 "$agent" --no-browser > agent.out 2>&1 &
           for i in $(seq 1 60); do grep -q MANTIS_READY agent.out && break; sleep 1; done
           cat agent.out
-          curl -fsS http://127.0.0.1:8797/api/agent
+          curl -fsS http://127.0.0.1:8797/api/agent; echo
           curl -fsSI http://127.0.0.1:8797/desktop-check.html | grep -i '^cross-origin-embedder-policy: require-corp'
           kill %1 || true
 
-      - name: Проверка окна установки (.dmg)
+      - name: Запуск встроенного Агента (Intel, через Rosetta)
         run: |
-          dmg="desktop/macos/out/Mantis-macOS-${{ matrix.arch }}.dmg"
-          mnt="$(hdiutil attach -nobrowse -readonly "$dmg" | awk -F'\t' '/\/Volumes\//{print $NF}' | tail -1)"
-          ls -la "$mnt" "$mnt/.background"
-          test -L "$mnt/Applications"
-          test -d "$mnt/Mantis.app"
-          hdiutil detach -quiet "$mnt"
-
-      - name: Первый запуск – «Подготовка Mac» и предложение переноса
-        if: matrix.arch == 'arm64'
-        continue-on-error: true
-        run: |
-          app="$(ls -d desktop/macos/src-tauri/target/*/release/bundle/macos/Mantis.app | head -1)"
-          rm -rf "$HOME/Library/Application Support/ru.rcmit.mantis"
-          open -n "$app"
-          for i in $(seq 1 60); do curl -fs http://127.0.0.1:8797/api/agent >/dev/null && break; sleep 1; done
-          curl -fsS -o /dev/null -w "desktop-setup.html: %{http_code}\n" http://127.0.0.1:8797/desktop-setup.html
-          curl -fsS http://127.0.0.1:8797/api/lan-check; echo
-          sleep 6
-          mkdir -p shots
-          screencapture -x shots/first-run.png || true
-          osascript -e 'tell application "System Events" to get name of every window of (every process whose name is "Mantis")' || true
-          # «Перенести» в окне вопроса → копия в /Applications и перезапуск оттуда
-          osascript -e 'tell application "System Events" to tell process "Mantis" to click button "Перенести" of window 1' || true
-          for i in $(seq 1 40); do pgrep -f "^/Applications/Mantis.app/Contents/MacOS/mantis" >/dev/null && break; sleep 1; done
-          ls -la /Applications | grep -i mantis || true
-          xattr -l /Applications/Mantis.app || true
-          ps -axo command | grep -i "Mantis.app/Contents/MacOS" | grep -v grep || true
-          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8797/api/agent >/dev/null && break; sleep 1; done
-          curl -fsS http://127.0.0.1:8797/api/agent; echo
-          sleep 4
-          screencapture -x shots/after-move.png || true
-          pkill -f "Mantis.app/Contents/MacOS/mantis" || true
-          test -f /Applications/Mantis.app/Contents/Info.plist && echo "ПЕРЕНОС: OK"
-
-      - uses: actions/upload-artifact@v4
-        if: matrix.arch == 'arm64'
-        with:
-          name: shots-${{ matrix.arch }}
-          path: shots
-          if-no-files-found: ignore
+          softwareupdate --install-rosetta --agree-to-license >/dev/null 2>&1 || true
+          if ! arch -x86_64 /usr/bin/true 2>/dev/null; then echo "Rosetta недоступна – пропускаю"; exit 0; fi
+          agent=/Applications/Mantis.app/Contents/MacOS/mantis-agent
+          MANTIS_SHELL=macos MANTIS_PORT=8798 arch -x86_64 "$agent" --no-browser > agent-x64.out 2>&1 &
+          for i in $(seq 1 90); do grep -q MANTIS_READY agent-x64.out && break; sleep 1; done
+          cat agent-x64.out
+          curl -fsS http://127.0.0.1:8798/api/agent; echo
+          kill %1 || true
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Mantis-macOS-${{ matrix.arch }}
-          path: desktop/macos/out/Mantis-macOS-${{ matrix.arch }}.dmg
+          name: Mantis-macOS
+          path: |
+            desktop/macos/out/Mantis-Installer.pkg
+            desktop/macos/out/Mantis.dmg
           if-no-files-found: error
 
   release:
@@ -125,15 +105,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
+          name: Mantis-macOS
           path: out
-          merge-multiple: true
       - name: Предварительный релиз
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="$(node -p "require('./package.json').version")"
           TAG="macos-v$VERSION-$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}"
-          (cd out && shasum -a 256 *.dmg > SHA256SUMS.txt)
-          gh release create "$TAG" out/*.dmg out/SHA256SUMS.txt \
+          (cd out && sha256sum Mantis-Installer.pkg Mantis.dmg > SHA256SUMS.txt)
+          gh release create "$TAG" out/Mantis-Installer.pkg out/Mantis.dmg out/SHA256SUMS.txt \
             --target "$GITHUB_SHA" --prerelease --latest=false --title "Mantis для macOS $VERSION (проверка)" \
-            --notes "Сборка для проверки на Mac. Apple Silicon (M1 и новее) – Mantis-macOS-arm64.dmg, Intel – Mantis-macOS-x64.dmg. Без подписи Apple: при первом запуске – «Системные настройки» → «Конфиденциальность и безопасность» → «Всё равно открыть»."
+            --notes "Для всех Mac (Apple Silicon и Intel), macOS 13 и новее. Установка: скачать Mantis-Installer.pkg, открыть, «Продолжить» → «Установить». Пока без подписи Apple: если Mac не даёт открыть установщик – «Системные настройки» → «Конфиденциальность и безопасность» → «Всё равно открыть»."

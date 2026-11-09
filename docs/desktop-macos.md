@@ -24,12 +24,20 @@
   Если доступ запрещён, кнопка открывает нужный раздел «Системных настроек» (`open_settings`). Все шаги необязательные. «Продолжить в Mantis» записывает отметку `~/Library/Application Support/ru.rcmit.mantis/setup-done`.
 - Команды для этого: `install_state`, `move_to_applications`, `open_settings`, `setup_done`.
 
+## Установка для пользователя
+Один файл `Mantis-Installer.pkg` для всех Mac (Apple Silicon и Intel, macOS 13+). Двойной клик → мастер установки («Продолжить» → «Установить», пароль Mac) → Mantis в «Программах» и сразу запущен. Переносить файлы и распаковывать архивы не нужно.
+- `desktop/macos/pkg/`: мастер (`distribution.xml`, тексты `resources/*.html`), скрипты `preinstall` (закрыть запущенный Mantis, убрать прежнюю версию с тем же bundle id; чужое приложение «Mantis.app» переименовывается, не удаляется) и `postinstall` (запустить Mantis от имени пользователя).
+- Установка строго в /Applications (BundleIsRelocatable = NO).
+- Настройки и записи хранятся в данных пользователя (WebKit, ru.rcmit.mantis, адрес 127.0.0.1:8797) и при обновлении сохраняются.
+- `Mantis.dmg` тоже собирается – для тех, кто привык перетаскивать в «Программы».
+
 ## Сборка
-- GitHub Actions: пуш в ветку `desktop-macos` или Actions → «Mantis для macOS» → Run workflow. Результат – предварительный релиз (prerelease) с `Mantis-macOS-arm64.dmg` и `Mantis-macOS-x64.dmg`. Prerelease не становится «latest», поэтому прод-сервер его не забирает.
-- Локально на Mac: `bash desktop/macos/build.sh arm64` (или `x64`) → `desktop/macos/out/`.
+- GitHub Actions: пуш в ветку `desktop-macos` или Actions → «Mantis для macOS» → Run workflow. Результат – предварительный релиз (prerelease) с `Mantis-Installer.pkg` и `Mantis.dmg`. В CI pkg ставится на macOS-машину (установка и повторная установка поверх), встроенный Агент запускается в обеих архитектурах (Intel – через Rosetta). Prerelease не становится «latest», поэтому прод-сервер его не забирает.
+- Локально на Mac: `bash desktop/macos/build.sh` (одна версия для всех Mac) или `arm64` / `x64` для быстрой проверки → `desktop/macos/out/`.
 
 ## Подпись
-Сейчас ad-hoc: при первом запуске macOS спросит, открывать ли приложение от неизвестного разработчика – «Системные настройки» → «Конфиденциальность и безопасность» → «Всё равно открыть». Для установки без предупреждений нужен сертификат Developer ID и заверение у Apple: переменные `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` в секретах GitHub, Tauri подпишет и заверит сам.
+Сейчас приложение подписано ad-hoc, установщик не подписан. macOS не откроет скачанный установщик сразу: «Системные настройки» → «Конфиденциальность и безопасность» → «Всё равно открыть» (один раз). Приложение, поставленное установщиком, открывается без вопросов.
+Для установки без предупреждений нужен аккаунт Apple Developer и два сертификата: Developer ID Application (приложение) и Developer ID Installer (pkg), плюс заверение у Apple (notarytool). Переменные `APPLE_SIGNING_IDENTITY`, `APPLE_INSTALLER_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` – в секреты GitHub.
 
 ## Проверка компьютера
 `desktop-check.html` – одна страница для приложения и для Chrome на том же Mac: многопоточность, WebGPU, скорость нейросети на видеокарте и процессоре, камера, работа в свёрнутом окне. Кнопка «Скопировать результаты» – для сравнения.

@@ -1,0 +1,11 @@
+#!/bin/bash
+# После установки: запустить Mantis от имени пользователя, который сидит за Mac.
+# При установке из Терминала (installer -pkg) ничего не запускаем.
+[ "$COMMAND_LINE_INSTALL" = "1" ] && exit 0
+
+user="$(/usr/bin/stat -f %Su /dev/console)"
+if [ -n "$user" ] && [ "$user" != "root" ] && [ "$user" != "loginwindow" ]; then
+  uid="$(/usr/bin/id -u "$user")"
+  /bin/launchctl asuser "$uid" /usr/bin/sudo -u "$user" /usr/bin/open -a "/Applications/Mantis.app" || true
+fi
+exit 0
