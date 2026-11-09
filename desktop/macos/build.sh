@@ -54,6 +54,14 @@ case "$ARCH" in
 esac
 ls -lh "$BIN/mantis-agent-$TRIPLE"
 
+echo "== Фон окна установки (.dmg)"
+# tauri.conf.json → bundle.macOS.dmg.background; обычная и Retina-картинка в одном файле (desktop/macos/dmg)
+if command -v tiffutil >/dev/null 2>&1; then
+  tiffutil -cathidpicheck desktop/macos/dmg/background.png desktop/macos/dmg/background@2x.png -out desktop/macos/dmg/background.tiff
+else
+  cp desktop/macos/dmg/background.png desktop/macos/dmg/background.tiff
+fi
+
 echo "== Приложение"
 cd desktop/macos
 npm ci --silent
