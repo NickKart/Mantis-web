@@ -97,6 +97,13 @@ jobs:
           osascript -e 'tell application "System Events" to get {unix id, name of every window} of (every process whose name is "Mantis")' || true
           sleep 8
           screencapture -x shots/after-move-2.png || true
+          # повторный запуск из «Программ» с нуля: вопроса о переносе быть не должно
+          pkill -f "Mantis.app/Contents/MacOS/mantis" || true
+          sleep 5
+          screencapture -x shots/no-app.png || true
+          open /Applications/Mantis.app
+          sleep 15
+          screencapture -x shots/relaunch.png || true
           pkill -f "Mantis.app/Contents/MacOS/mantis" || true
           sleep 2
           cat automove.log || true
