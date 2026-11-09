@@ -92,6 +92,11 @@ jobs:
           curl -fsS http://127.0.0.1:8797/api/agent; echo
           sleep 4
           screencapture -x shots/after-move.png || true
+          # чьи окна на экране: после переноса вопроса «Перенести?» быть не должно
+          ps -axo pid,command | grep -i "Mantis" | grep -v grep || true
+          osascript -e 'tell application "System Events" to get {unix id, name of every window} of (every process whose name is "Mantis")' || true
+          sleep 8
+          screencapture -x shots/after-move-2.png || true
           pkill -f "Mantis.app/Contents/MacOS/mantis" || true
           sleep 2
           cat automove.log || true
