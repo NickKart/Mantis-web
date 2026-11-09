@@ -414,7 +414,18 @@ fn main() {
             if let Err(e) = start_agent(&handle) {
                 show_error(&win, &format!("Не удалось запустить Агент: {e}"));
             }
-            offer_move(&handle);
+            if std::env::var_os("MANTIS_AUTOMOVE").is_some() {
+                // проверка в CI: перенос без вопроса (окно вопроса там не нажать)
+                let h = handle.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_secs(3));
+                    if let Err(e) = move_to_applications_now(&h) {
+                        eprintln!("MANTIS_AUTOMOVE: {e}");
+                    }
+                });
+            } else {
+                offer_move(&handle);
+            }
             Ok(())
         })
         .on_window_event(|window, event| {

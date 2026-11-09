@@ -80,9 +80,10 @@ jobs:
           mkdir -p shots
           screencapture -x shots/first-run.png || true
           osascript -e 'tell application "System Events" to get name of every window of (every process whose name is "Mantis")' || true
-          # «Перенести» в окне вопроса → копия в /Applications и перезапуск оттуда
-          # окно вопроса – отдельное окно (NSAlert): ищем его среди всех окон, иначе – Return (кнопка по умолчанию)
-          osascript -e 'tell application "System Events" to tell process "Mantis"' -e 'set frontmost to true' -e 'repeat with w in windows' -e 'if exists button "Перенести" of w then click button "Перенести" of w' -e 'end repeat' -e 'end tell' || osascript -e 'tell application "System Events" to tell process "Mantis" to keystroke return' || true
+          # перенос в «Программы»: окно вопроса в CI не нажать (нет прав на управление интерфейсом),
+          # поэтому тот же перенос запускаем без вопроса – MANTIS_AUTOMOVE=1
+          pkill -f "Mantis.app/Contents/MacOS/mantis" || true; sleep 2
+          MANTIS_AUTOMOVE=1 "$app/Contents/MacOS/mantis" > automove.log 2>&1 &
           for i in $(seq 1 40); do pgrep -f "^/Applications/Mantis.app/Contents/MacOS/mantis" >/dev/null && break; sleep 1; done
           ls -la /Applications | grep -i mantis || true
           xattr -l /Applications/Mantis.app || true
@@ -93,6 +94,7 @@ jobs:
           screencapture -x shots/after-move.png || true
           pkill -f "Mantis.app/Contents/MacOS/mantis" || true
           sleep 2
+          cat automove.log || true
           test -f /Applications/Mantis.app/Contents/Info.plist && echo "ПЕРЕНОС: OK"
 
       - uses: actions/upload-artifact@v4
