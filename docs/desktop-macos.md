@@ -36,6 +36,8 @@
 - Локально на Mac: `bash desktop/macos/build.sh` (одна версия для всех Mac) или `arm64` / `x64` для быстрой проверки → `desktop/macos/out/`.
 
 ## Подпись
+Приложение подписывается с усиленной защитой macOS (hardened runtime) и разрешениями из `src-tauri/Entitlements.plist`: камера (`com.apple.security.device.camera` – без него macOS молча запрещает камеру и не показывает Mantis в списке «Камера») и JIT для встроенного Агента. CI проверяет, что разрешение на камеру есть в подписи обоих файлов.
+
 Сейчас приложение подписано ad-hoc, установщик не подписан. macOS не откроет скачанный установщик сразу: «Системные настройки» → «Конфиденциальность и безопасность» → «Всё равно открыть» (один раз). Приложение, поставленное установщиком, открывается без вопросов.
 Для установки без предупреждений нужен аккаунт Apple Developer и два сертификата: Developer ID Application (приложение) и Developer ID Installer (pkg), плюс заверение у Apple (notarytool). Переменные `APPLE_SIGNING_IDENTITY`, `APPLE_INSTALLER_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` – в секреты GitHub.
 

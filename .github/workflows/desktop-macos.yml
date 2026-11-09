@@ -58,6 +58,12 @@ jobs:
             [[ "$a" == *x86_64* && "$a" == *arm64* ]]
           done
           /usr/libexec/PlistBuddy -c "Print :NSCameraUsageDescription" "$app/Contents/Info.plist"
+          # без разрешения на камеру в подписи macOS молча запрещает камеру (hardened runtime)
+          for f in mantis mantis-agent; do
+            ent="$(codesign -d --entitlements - --xml "$app/Contents/MacOS/$f" 2>/dev/null)"
+            echo "$f: $(codesign -dv "$app/Contents/MacOS/$f" 2>&1 | grep -o 'flags=[^ ]*')"
+            echo "$ent" | grep -q "com.apple.security.device.camera" || { echo "НЕТ разрешения на камеру в подписи $f"; exit 1; }
+          done
 
       - name: Проверка окна установки (.dmg)
         run: |

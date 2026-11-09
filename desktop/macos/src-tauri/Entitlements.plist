@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Разрешения в подписи приложения. Tauri подписывает с усиленной защитой macOS (hardened runtime) –
+  она нужна и для будущего заверения у Apple. С ней без этих ключей macOS молча запрещает камеру
+  и даже не показывает Mantis в «Настройки → Конфиденциальность и безопасность → Камера».
+  Тот же файл применяется ко встроенному Агенту (Bun): ему нужен JIT для скорости.
+-->
+<plist version="1.0">
+<dict>
+  <!-- камера Mac и USB-камеры (getUserMedia в окне Mantis) -->
+  <key>com.apple.security.device.camera</key>
+  <true/>
+  <!-- встроенный Агент: движок JavaScript Bun -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+</dict>
+</plist>
