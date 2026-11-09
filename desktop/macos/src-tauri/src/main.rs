@@ -7,7 +7,8 @@
 // а для «Подготовки Mac» (desktop-setup.html) – install_state, move_to_applications, open_settings, setup_done.
 //
 // Первый запуск: вместо главной страницы открывается «Подготовка Mac» (разрешения по шагам). Если приложение
-// запущено не из «Программ» (прямо из образа .dmg или «Загрузок»), оно предлагает перенести себя туда.
+// запущено не из «Программ» (прямо из образа .dmg или «Загрузок»), та же страница открывается при каждом
+// запуске – первым шагом «Перенести в «Программы»».
 
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
@@ -19,7 +20,6 @@ use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::utils::config::BackgroundThrottlingPolicy;
 use tauri::{AppHandle, Manager, RunEvent, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
@@ -221,32 +221,6 @@ async fn move_to_applications(app: AppHandle) -> Result<(), String> {
     move_to_applications_now(&app)
 }
 
-/// Предложить перенос, если запущено не из «Программ» (при каждом запуске, пока не перенесут).
-fn offer_move(app: &AppHandle) {
-    let Some(cur) = bundle_path() else { return };
-    if in_applications(&cur) {
-        return;
-    }
-    let h = app.clone();
-    app.dialog()
-        .message("Mantis запущен не из папки «Программы» – например, прямо из скачанного образа. Перенести его туда? Так он будет запускаться вместе с Mac и обновляться.")
-        .title("Перенести Mantis в «Программы»?")
-        .kind(MessageDialogKind::Info)
-        .buttons(MessageDialogButtons::OkCancelCustom("Перенести".into(), "Не сейчас".into()))
-        .show(move |yes| {
-            if !yes {
-                return;
-            }
-            if let Err(e) = move_to_applications_now(&h) {
-                h.dialog()
-                    .message(format!("Не получилось перенести: {e}.\n\nМожно вручную: перетащите Mantis из окна образа в папку «Программы»."))
-                    .title("Mantis")
-                    .kind(MessageDialogKind::Warning)
-                    .show(|_| {});
-            }
-        });
-}
-
 // ---------------------------------------------------------------- «Подготовка Mac»
 
 /// Открыть раздел «Системных настроек»: только известные разделы.
@@ -276,10 +250,12 @@ fn setup_done(app: AppHandle) {
     }
 }
 
-/// Первая страница после запуска: «Подготовка Mac», пока её не прошли, потом – Mantis.
+/// Первая страница после запуска: «Подготовка Mac», пока её не прошли или пока приложение запущено
+/// не из «Программ» (там первый шаг – «Перенести в «Программы»»), иначе – Mantis.
 fn first_page(app: &AppHandle) -> &'static str {
+    let outside = bundle_path().map(|p| !in_applications(&p)).unwrap_or(false);
     match setup_flag(app) {
-        Some(f) if f.exists() => "?desktop=macos",
+        Some(f) if f.exists() && !outside => "?desktop=macos",
         _ => "desktop-setup.html?desktop=macos",
     }
 }
@@ -370,7 +346,6 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec!["--autostart"])))
         .manage(Shell::default())
         .invoke_handler(tauri::generate_handler![
@@ -425,8 +400,6 @@ fn main() {
                         eprintln!("MANTIS_AUTOMOVE: {e}");
                     }
                 });
-            } else {
-                offer_move(&handle);
             }
             Ok(())
         })
