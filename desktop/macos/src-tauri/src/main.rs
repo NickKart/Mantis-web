@@ -210,7 +210,9 @@ fn move_to_applications_now(app: &AppHandle) -> Result<(), String> {
         .args(["-c", &format!("sleep 1; /usr/bin/open -n {}{}", sh_quote(APPLICATIONS_APP), detach)])
         .spawn()
         .map_err(|e| e.to_string())?;
-    app.exit(0);
+    // выход – из главного потока (команда и проверка в CI вызывают перенос из других потоков)
+    let h = app.clone();
+    let _ = app.run_on_main_thread(move || h.exit(0));
     Ok(())
 }
 

@@ -107,6 +107,9 @@ jobs:
           pkill -f "Mantis.app/Contents/MacOS/mantis" || true
           sleep 2
           cat automove.log || true
+          # если приложение упало – начало отчёта о сбое
+          r="$(ls -t "$HOME"/Library/Logs/DiagnosticReports/mantis* 2>/dev/null | head -1)"
+          [ -n "$r" ] && head -c 6000 "$r" || true
           test -f /Applications/Mantis.app/Contents/Info.plist && echo "ПЕРЕНОС: OK"
 
       - uses: actions/upload-artifact@v4
