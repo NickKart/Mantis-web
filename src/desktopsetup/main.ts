@@ -260,7 +260,7 @@ const cameraTodo = (): Partial<Step> => ({
   ask: undefined,
   actions: [
     { label: "Разрешить камеру", kind: "primary", run: askCamera },
-    { label: "Только IP-камеры – пропустить", kind: "ghost", run: () => set("camera", { state: "skip", note: "Пропущено", actions: [{ label: "Разрешить камеру", run: askCamera }] }) },
+    { label: "Только IP-камеры – пропустить шаг 3", kind: "ghost", run: () => set("camera", { state: "skip", note: "Пропущено", actions: [{ label: "Разрешить камеру", run: askCamera }] }) },
   ],
 });
 
