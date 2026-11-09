@@ -8,6 +8,10 @@ fn main() {
             "set_autostart",
             "quit_app",
             "pilot_state",
+            "install_state",
+            "move_to_applications",
+            "open_settings",
+            "setup_done",
         ])),
     )
     .expect("tauri-build");

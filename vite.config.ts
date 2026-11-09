@@ -29,8 +29,8 @@ export default defineConfig({
     target: "es2022",
     chunkSizeWarningLimit: 2000,
     // страницы: приложение (index.html), личный кабинет (cabinet.html), отчёт A/B-теста (ab.html),
-    // проверка компьютера для настольного приложения (desktop-check.html)
-    rollupOptions: { input: { main: "index.html", cabinet: "cabinet.html", ab: "ab.html", check: "desktop-check.html" } },
+    // проверка компьютера и подготовка Mac для настольного приложения (desktop-check.html, desktop-setup.html)
+    rollupOptions: { input: { main: "index.html", cabinet: "cabinet.html", ab: "ab.html", check: "desktop-check.html", setup: "desktop-setup.html" } },
   },
   server: {
     // Нужны для многопоточного WASM (SharedArrayBuffer)

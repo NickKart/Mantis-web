@@ -1,5 +1,6 @@
 // HTTP API моста для страницы Mantis (тот же адрес, что и сама страница):
 //   GET    /api/bridge                 — мост работает? есть ли ffmpeg
+//   GET    /api/lan-check              — есть ли доступ к локальной сети (разрешение macOS «Локальная сеть»)
 //   GET    /api/cameras/scan           — поиск камер в локальной сети
 //   POST   /api/cameras/onvif          — {onvifURL, user, password, main?} → RTSP-ссылка
 //   POST   /api/streams                — {url, user, password} → открыть поток
@@ -8,7 +9,7 @@
 //   DELETE /api/streams/:id            — закрыть поток (ffmpeg останавливается, когда закрыли все, кто открыл)
 // Мост слушает только этот компьютер: пароли камер и видео не уходят в интернет.
 
-import { OnvifError, localSubnets, onvifStreamUri, scanCameras, templates } from "./onvif.mjs";
+import { OnvifError, lanCheck, localSubnets, onvifStreamUri, scanCameras, templates } from "./onvif.mjs";
 import { StreamManager } from "./streams.mjs";
 
 function send(res, code, data, headers = {}) {
@@ -74,6 +75,9 @@ export function createBridge({ extraTargets = envTargets(), allowRemote = false 
       if (req.method === "GET" && url.pathname === "/api/bridge") {
         const ff = streams.ffmpeg();
         return send(res, 200, { ok: true, ffmpeg: ff ? ff.version : null, subnets: localSubnets().map((s) => s.description) });
+      }
+      if (req.method === "GET" && url.pathname === "/api/lan-check") {
+        return send(res, 200, await lanCheck());
       }
       if (req.method === "GET" && url.pathname === "/api/cameras/scan") {
         const r = await scanCameras({ extraTargets });

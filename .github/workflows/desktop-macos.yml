@@ -69,6 +69,38 @@ jobs:
           curl -fsSI http://127.0.0.1:8797/desktop-check.html | grep -i '^cross-origin-embedder-policy: require-corp'
           kill %1 || true
 
+      - name: Проверка окна установки (.dmg)
+        run: |
+          dmg="desktop/macos/out/Mantis-macOS-${{ matrix.arch }}.dmg"
+          mnt="$(hdiutil attach -nobrowse -readonly "$dmg" | awk -F'\t' '/\/Volumes\//{print $NF}' | tail -1)"
+          ls -la "$mnt" "$mnt/.background"
+          test -L "$mnt/Applications"
+          test -d "$mnt/Mantis.app"
+          hdiutil detach -quiet "$mnt"
+
+      - name: Первый запуск – «Подготовка Mac» и предложение переноса
+        if: matrix.arch == 'arm64'
+        continue-on-error: true
+        run: |
+          app="$(ls -d desktop/macos/src-tauri/target/*/release/bundle/macos/Mantis.app | head -1)"
+          rm -rf "$HOME/Library/Application Support/ru.rcmit.mantis"
+          open -n "$app"
+          for i in $(seq 1 60); do curl -fs http://127.0.0.1:8797/api/agent >/dev/null && break; sleep 1; done
+          curl -fsS -o /dev/null -w "desktop-setup.html: %{http_code}\n" http://127.0.0.1:8797/desktop-setup.html
+          curl -fsS http://127.0.0.1:8797/api/lan-check; echo
+          sleep 6
+          mkdir -p shots
+          screencapture -x shots/first-run.png || true
+          osascript -e 'tell application "System Events" to get name of every window of (every process whose name is "Mantis")' || true
+          pkill -f "Mantis.app/Contents/MacOS/mantis" || true
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.arch == 'arm64'
+        with:
+          name: shots-${{ matrix.arch }}
+          path: shots
+          if-no-files-found: ignore
+
       - uses: actions/upload-artifact@v4
         with:
           name: Mantis-macOS-${{ matrix.arch }}

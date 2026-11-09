@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 // @ts-expect-error — модули моста на чистом JS
-import { httpAuthorization, parseProbeMatch, templates, xmlAttrs, xmlFirst } from "../bridge/onvif.mjs";
+import { httpAuthorization, lanCheck, lanStatusFromError, parseProbeMatch, templates, xmlAttrs, xmlFirst } from "../bridge/onvif.mjs";
 // @ts-expect-error — модули моста на чистом JS
 import { StreamManager, jpegSize, redact, withCredentials } from "../bridge/streams.mjs";
 
@@ -67,5 +67,18 @@ describe("мост: один поток на несколько зрителей
     m.release(a.id);
     expect(m.get(a.id)).toBeUndefined();
     m.closeAll();
+  });
+});
+
+describe("доступ к локальной сети (разрешение macOS)", () => {
+  it("EHOSTUNREACH – запрещено, остальное – сеть доступна", () => {
+    expect(lanStatusFromError("EHOSTUNREACH")).toBe("blocked");
+    expect(lanStatusFromError("EPERM")).toBe("blocked");
+    expect(lanStatusFromError(undefined)).toBe("allowed");
+    expect(lanStatusFromError("EHOSTDOWN")).toBe("allowed");
+  });
+  it("проверка отвечает одним из известных состояний", async () => {
+    const r = await lanCheck({ timeout: 500 });
+    expect(["allowed", "blocked", "waiting", "no-network"]).toContain(r.status);
   });
 });

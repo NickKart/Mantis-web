@@ -15,19 +15,40 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["app", "dmg"],
+    "targets": [
+      "app",
+      "dmg"
+    ],
     "category": "public.app-category.business",
     "copyright": "© РСМ АйТи",
     "shortDescription": "Подсчёт посетителей витрины",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.png"],
-    "externalBin": ["binaries/mantis-agent"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.png"
+    ],
+    "externalBin": [
+      "binaries/mantis-agent"
+    ],
     "macOS": {
       "minimumSystemVersion": "13.0",
       "signingIdentity": "-",
       "dmg": {
-        "windowSize": { "width": 600, "height": 380 },
-        "appPosition": { "x": 160, "y": 190 },
-        "applicationFolderPosition": { "x": 440, "y": 190 }
+        "background": "../dmg/background.tiff",
+        "windowSize": {
+          "width": 660,
+          "height": 470
+        },
+        "appPosition": {
+          "x": 170,
+          "y": 175
+        },
+        "applicationFolderPosition": {
+          "x": 490,
+          "y": 175
+        }
       }
     }
   }

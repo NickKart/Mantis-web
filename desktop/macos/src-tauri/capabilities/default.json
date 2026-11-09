@@ -9,6 +9,10 @@
     "allow-keep-awake",
     "allow-set-autostart",
     "allow-quit-app",
-    "allow-pilot-state"
+    "allow-pilot-state",
+    "allow-install-state",
+    "allow-move-to-applications",
+    "allow-open-settings",
+    "allow-setup-done"
   ]
 }

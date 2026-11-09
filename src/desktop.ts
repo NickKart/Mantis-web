@@ -142,3 +142,41 @@ export async function quitApp(): Promise<void> {
 export function reportPilotRunning(running: boolean): void {
   void call("pilot_state", { running });
 }
+
+// ---------------------------------------------------------------- подготовка Mac (desktop-setup.html)
+
+/** Разделы «Системных настроек» macOS, которые может открыть оболочка. */
+export type SettingsPane = "local-network" | "camera" | "login-items" | "security";
+
+/** Открыть нужный раздел «Системных настроек» (только приложение для Mac). */
+export async function openSettings(pane: SettingsPane): Promise<boolean> {
+  return (await call<boolean>("open_settings", { pane })) ?? false;
+}
+
+export interface InstallState {
+  /** приложение лежит в «Программах» */
+  inApplications: boolean;
+  /** откуда запущено (для подсказки) */
+  path: string;
+}
+
+export function installState(): Promise<InstallState | null> {
+  return call<InstallState>("install_state");
+}
+
+/** Перенести приложение в «Программы» и перезапустить оттуда. Ошибка – текстом. */
+export async function moveToApplications(): Promise<string | null> {
+  const ipc = (window as unknown as { __TAURI_INTERNALS__?: TauriInternals }).__TAURI_INTERNALS__;
+  if (!ipc?.invoke) return "Доступно только в приложении Mantis для Mac";
+  try {
+    await ipc.invoke("move_to_applications");
+    return null;
+  } catch (e) {
+    return String(e);
+  }
+}
+
+/** Подготовка пройдена – при следующих запусках приложение сразу открывает Mantis. */
+export async function setupDone(): Promise<void> {
+  await call("setup_done");
+}
