@@ -92,7 +92,18 @@ jobs:
           mkdir -p shots
           screencapture -x shots/first-run.png || true
           osascript -e 'tell application "System Events" to get name of every window of (every process whose name is "Mantis")' || true
+          # «Перенести» в окне вопроса → копия в /Applications и перезапуск оттуда
+          osascript -e 'tell application "System Events" to tell process "Mantis" to click button "Перенести" of window 1' || true
+          for i in $(seq 1 40); do pgrep -f "^/Applications/Mantis.app/Contents/MacOS/mantis" >/dev/null && break; sleep 1; done
+          ls -la /Applications | grep -i mantis || true
+          xattr -l /Applications/Mantis.app || true
+          ps -axo command | grep -i "Mantis.app/Contents/MacOS" | grep -v grep || true
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8797/api/agent >/dev/null && break; sleep 1; done
+          curl -fsS http://127.0.0.1:8797/api/agent; echo
+          sleep 4
+          screencapture -x shots/after-move.png || true
           pkill -f "Mantis.app/Contents/MacOS/mantis" || true
+          test -f /Applications/Mantis.app/Contents/Info.plist && echo "ПЕРЕНОС: OK"
 
       - uses: actions/upload-artifact@v4
         if: matrix.arch == 'arm64'
