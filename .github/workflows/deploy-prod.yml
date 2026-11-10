@@ -8,6 +8,10 @@
 # Mantis Агент (IP-камеры) собирается на macOS-машине (там есть codesign для подписи .app) для Mac (Apple Silicon,
 # Intel) и Windows и прикладывается к тому же релизу. Сервер забирает архивы в /var/www/mantis/shared/downloads –
 # на них ведут кнопки «Скачать» (https://mantis.rcmit.ru/downloads/...). Если Агент не собрался, сайт всё равно выкладывается.
+#
+# Приложение Mantis для Mac (окно + встроенный Агент, desktop/macos) собирается там же, одной сборкой для Apple Silicon
+# и Intel, и раздаётся как установщик Mantis-Installer.pkg – на него ведёт кнопка «Скачать для macOS».
+# Страница внутри приложения – из того же коммита, что сайт. Не собралось – остаётся прежний установщик.
 
 name: Деплой в прод
 
@@ -52,10 +56,62 @@ jobs:
             agent/dist/agent.sha256
           retention-days: 3
 
+  mac-app:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/macos/src-tauri -> target
+          key: universal
+
+      - name: Сборка приложения Mantis для Mac (Apple Silicon + Intel)
+        run: |
+          npm ci --ignore-scripts
+          bash desktop/macos/build.sh universal
+
+      - name: Проверка подписи и установщика
+        run: |
+          app=desktop/macos/src-tauri/target/universal-apple-darwin/release/bundle/macos/Mantis.app
+          codesign --verify --deep --strict "$app"
+          for f in mantis mantis-agent; do
+            a="$(lipo -archs "$app/Contents/MacOS/$f")"; echo "$f: $a"
+            [[ "$a" == *x86_64* && "$a" == *arm64* ]]
+            # без разрешения на камеру в подписи macOS молча запрещает камеру
+            codesign -d --entitlements - --xml "$app/Contents/MacOS/$f" 2>/dev/null | grep -q com.apple.security.device.camera \
+              || { echo "НЕТ разрешения на камеру в подписи $f"; exit 1; }
+          done
+          pkg=desktop/macos/out/Mantis-Installer.pkg
+          sudo installer -pkg "$pkg" -target / | tail -1
+          codesign --verify --deep --strict /Applications/Mantis.app
+          cd desktop/macos/out && shasum -a 256 Mantis-Installer.pkg > mac-app.sha256 && cat mac-app.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-app
+          path: |
+            desktop/macos/out/Mantis-Installer.pkg
+            desktop/macos/out/mac-app.sha256
+          retention-days: 3
+
   deploy:
     runs-on: ubuntu-latest
-    needs: agent
-    # Агент не собрался – сайт всё равно выкладываем (старые архивы Агента на сервере остаются)
+    needs: [agent, mac-app]
+    # Агент или приложение для Mac не собрались – сайт всё равно выкладываем (на сервере остаются прежние файлы)
     if: ${{ !cancelled() }}
     env:
       PROD_URL: ${{ vars.PROD_URL || 'https://mantis.rcmit.ru' }}
@@ -103,18 +159,33 @@ jobs:
           name: agent
           path: agent-out
 
+      - name: Установщик Mantis для Mac
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: mac-app
+          path: mac-out
+
       - name: Архив релиза
         run: |
           mkdir -p release out
           cp -r dist release/dist
           cp server/dist/server.cjs server/dist/server.cjs.map server/schema.sql deploy/remote-deploy.sh release/
-          # список архивов Агента с sha256 – по нему сервер забирает их из релиза
+          # список файлов для скачивания с sha256 (agent.sha256) – по нему сервер забирает их из релиза
+          : > release/agent.sha256
           if [ -f agent-out/agent.sha256 ]; then
-            cp agent-out/agent.sha256 release/agent.sha256
+            cat agent-out/agent.sha256 >> release/agent.sha256
             cp agent-out/Mantis-Agent-*.zip out/
           else
-            echo "::warning::Агент не собран – кнопки «Скачать» будут вести на прежние архивы"
+            echo "::warning::Агент не собран – кнопка «Скачать для Windows» будет вести на прежний архив"
           fi
+          if [ -f mac-out/mac-app.sha256 ]; then
+            cat mac-out/mac-app.sha256 >> release/agent.sha256
+            cp mac-out/Mantis-Installer.pkg out/
+          else
+            echo "::warning::Приложение для Mac не собрано – кнопка «Скачать для macOS» будет вести на прежний установщик"
+          fi
+          cat release/agent.sha256
           echo "$GITHUB_SHA" > release/version.txt
           tar -czf out/mantis.tar.gz -C release .
           (cd out && sha256sum mantis.tar.gz > mantis.tar.gz.sha256)
@@ -126,8 +197,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="prod-$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}"
-          AGENT=$(ls out/Mantis-Agent-*.zip 2>/dev/null || true)
-          gh release create "$TAG" out/mantis.tar.gz out/mantis.tar.gz.sha256 out/version.txt $AGENT \
+          FILES=$(ls out/Mantis-Agent-*.zip out/Mantis-Installer.pkg 2>/dev/null || true)
+          gh release create "$TAG" out/mantis.tar.gz out/mantis.tar.gz.sha256 out/version.txt $FILES \
             --target "$GITHUB_SHA" --latest --title "Прод $TAG" \
             --notes "Релиз для mantis.rcmit.ru, коммит $GITHUB_SHA. Сервер подхватит его в течение минуты."
 

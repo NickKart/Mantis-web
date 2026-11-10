@@ -144,13 +144,14 @@ function IpPick(p: { config: ChannelConfig | null; onNext: SourceStepNext }) {
   if (c.bridge === false) {
     return (
       <section class="card">
-        <div class="card-head"><h2>IP-камеры подключаются через Mantis Агент</h2></div>
-        <p class="lead">Браузер сам не умеет искать камеры в сети и читать RTSP. Mantis Агент – небольшая программа для компьютера у витрины: она открывает эту же страницу, находит ONVIF-камеры в сети и передаёт кадры нейросети. Видео и пароли не уходят в интернет.</p>
+        <div class="card-head"><h2>IP-камеры подключаются через программу Mantis</h2></div>
+        <p class="lead">Браузер сам не умеет искать камеры в сети и читать RTSP. Установите Mantis на компьютер у витрины: программа находит ONVIF-камеры в сети и передаёт кадры нейросети. Видео и пароли не уходят в интернет.</p>
         <div class="onb-dl">
           <a class="btn lg" href={AGENT_LINKS.windows} download><IcWindows />Скачать для Windows</a>
           <a class="btn lg" href={AGENT_LINKS.mac} download><IcApple />Скачать для macOS</a>
         </div>
-        <p class="muted">Mac на процессоре Intel – <a href={AGENT_LINKS.macIntel} download>отдельная сборка</a>. После распаковки откройте «Как запустить.txt».</p>
+        <p class="muted">macOS: приложение Mantis для всех Mac (M1 и новее, Intel), macOS 13 и новее. Откройте Mantis-Installer.pkg и нажмите «Установить». Если Mac не даёт открыть установщик – «Системные настройки» → «Конфиденциальность и безопасность» → «Всё равно открыть».</p>
+        <p class="muted">Windows: Mantis Агент. После распаковки откройте «Как запустить.txt».</p>
       </section>
     );
   }

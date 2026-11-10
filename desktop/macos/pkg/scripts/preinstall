@@ -1,0 +1,19 @@
+#!/bin/bash
+# Перед установкой: закрыть запущенный Mantis и убрать прежнюю версию, чтобы не осталось лишних файлов.
+# Настройки и статистика лежат не в приложении, а в данных пользователя – они не трогаются.
+APP="/Applications/Mantis.app"
+
+pkill -x mantis 2>/dev/null
+pkill -f "Mantis.app/Contents/MacOS/mantis-agent" 2>/dev/null
+sleep 1
+
+if [ -d "$APP" ]; then
+  id="$(/usr/bin/defaults read "$APP/Contents/Info" CFBundleIdentifier 2>/dev/null)"
+  if [ "$id" = "ru.rcmit.mantis" ]; then
+    rm -rf "$APP"
+  else
+    # другое приложение с тем же названием – не удаляем, а переименовываем
+    mv "$APP" "/Applications/Mantis (прежнее).app" 2>/dev/null || true
+  fi
+fi
+exit 0

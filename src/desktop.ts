@@ -1,5 +1,5 @@
-// Настольная оболочка Mantis (Windows, Tauri): страница та же, но открыта внутри приложения.
-// Оболочка открывает страницу с ?desktop=windows и даёт несколько команд через IPC Tauri:
+// Настольная оболочка Mantis (Windows и macOS, Tauri): страница та же, но открыта внутри приложения.
+// Оболочка открывает страницу с ?desktop=windows или ?desktop=macos и даёт несколько команд через IPC Tauri:
 // запрет сна, автозапуск при входе в систему, сведения о компьютере, выход.
 // В обычном браузере всё это недоступно – функции возвращают null / false.
 
@@ -12,19 +12,23 @@ interface TauriInternals {
 const params = new URLSearchParams(location.search);
 const FLAG = "mantis.desktop";
 
-/** Название платформы оболочки: "windows" или null (обычный браузер). */
+/** Название платформы оболочки: "windows", "macos" или null (обычный браузер). */
 export const desktopShell: string | null = (() => {
   const q = params.get("desktop");
   try {
     // запоминаем: после перезагрузки страницы без параметра (F5) режим остаётся
     if (q) sessionStorage.setItem(FLAG, q);
-    return q ?? sessionStorage.getItem(FLAG) ?? (hasIpc() ? "windows" : null);
+    return q ?? sessionStorage.getItem(FLAG) ?? (hasIpc() ? ipcPlatform() : null);
   } catch {
-    return q ?? (hasIpc() ? "windows" : null);
+    return q ?? (hasIpc() ? ipcPlatform() : null);
   }
 })();
 
 export const isDesktop = desktopShell !== null;
+
+function ipcPlatform(): string {
+  return /Mac/i.test(navigator.platform || navigator.userAgent) ? "macos" : "windows";
+}
 
 function hasIpc(): boolean {
   return typeof (window as unknown as { __TAURI_INTERNALS__?: TauriInternals }).__TAURI_INTERNALS__?.invoke === "function";
@@ -45,6 +49,8 @@ export interface DesktopInfo {
   version: string;
   hostname: string;
   autostart: boolean;
+  /** Версия системы, например «macOS 26.1 (arm64)» – сообщает оболочка для Mac. */
+  os?: string;
 }
 
 export function desktopInfo(): Promise<DesktopInfo | null> {
@@ -135,4 +141,42 @@ export async function quitApp(): Promise<void> {
 /** Оболочка спрашивает перед закрытием окна: идёт ли подсчёт (тогда окно прячется в трей). */
 export function reportPilotRunning(running: boolean): void {
   void call("pilot_state", { running });
+}
+
+// ---------------------------------------------------------------- подготовка Mac (desktop-setup.html)
+
+/** Разделы «Системных настроек» macOS, которые может открыть оболочка. */
+export type SettingsPane = "local-network" | "camera" | "login-items" | "security";
+
+/** Открыть нужный раздел «Системных настроек» (только приложение для Mac). */
+export async function openSettings(pane: SettingsPane): Promise<boolean> {
+  return (await call<boolean>("open_settings", { pane })) ?? false;
+}
+
+export interface InstallState {
+  /** приложение лежит в «Программах» */
+  inApplications: boolean;
+  /** откуда запущено (для подсказки) */
+  path: string;
+}
+
+export function installState(): Promise<InstallState | null> {
+  return call<InstallState>("install_state");
+}
+
+/** Перенести приложение в «Программы» и перезапустить оттуда. Ошибка – текстом. */
+export async function moveToApplications(): Promise<string | null> {
+  const ipc = (window as unknown as { __TAURI_INTERNALS__?: TauriInternals }).__TAURI_INTERNALS__;
+  if (!ipc?.invoke) return "Доступно только в приложении Mantis для Mac";
+  try {
+    await ipc.invoke("move_to_applications");
+    return null;
+  } catch (e) {
+    return String(e);
+  }
+}
+
+/** Подготовка пройдена – при следующих запусках приложение сразу открывает Mantis. */
+export async function setupDone(): Promise<void> {
+  await call("setup_done");
 }

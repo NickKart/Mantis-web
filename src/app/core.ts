@@ -353,7 +353,7 @@ function deviceName(): string {
   const ua = navigator.userAgent;
   const os = /iPad|Macintosh.*Mobile/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? "iPad"
     : /iPhone/.test(ua) ? "iPhone" : /Android/.test(ua) ? "Android" : /Windows/.test(ua) ? "Windows" : /Mac/.test(ua) ? "Mac" : /Linux/.test(ua) ? "Linux" : "";
-  return `Mantis · ${desktopShell === "windows" ? "Windows" : os ? `браузер на ${os}` : "браузер"}`;
+  return `Mantis · ${desktopShell === "windows" ? "Windows" : desktopShell === "macos" ? "Mac" : os ? `браузер на ${os}` : "браузер"}`;
 }
 
 export const core = new Core();

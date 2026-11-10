@@ -35,6 +35,43 @@ export function localSubnets() {
   return out.sort((a, b) => (a.iface === "en0" ? -1 : b.iface === "en0" ? 1 : 0)).slice(0, 3);
 }
 
+// ---------------------------------------------------------------- доступ к локальной сети
+
+/** Код ошибки отправки в локальную сеть → разрешено ли приложению ходить в сеть магазина.
+ *  macOS 15+ без разрешения «Локальная сеть» отвечает EHOSTUNREACH («No route to host») сразу, ещё до сети.
+ *  EHOSTDOWN и прочее – сеть доступна, просто по этому адресу никого нет. */
+export function lanStatusFromError(code) {
+  return code === "EHOSTUNREACH" || code === "EPERM" || code === "EACCES" ? "blocked" : "allowed";
+}
+
+/** Проверка разрешения «Локальная сеть» (macOS): один UDP-пакет на адрес в своей подсети (обычно роутер).
+ *  Первая такая попытка показывает системный вопрос «Разрешить Mantis находить устройства в локальной сети?».
+ *  → {status: "allowed" | "blocked" | "waiting" | "no-network", target, code} */
+export function lanCheck({ timeout = 2000 } = {}) {
+  const net0 = localSubnets()[0];
+  if (!net0 || !net0.hosts.length) return Promise.resolve({ status: "no-network", target: null, code: null });
+  const target = net0.hosts[0];
+  return new Promise((resolve) => {
+    const sock = dgram.createSocket("udp4");
+    let done = false;
+    const finish = (status, code = null) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      try {
+        sock.close();
+      } catch {
+        /* уже закрыт */
+      }
+      resolve({ status, target, code });
+    };
+    // macOS ещё ждёт ответа пользователя на системный вопрос
+    const timer = setTimeout(() => finish("waiting"), timeout);
+    sock.on("error", (e) => finish(lanStatusFromError(e.code), e.code ?? null));
+    sock.send(Buffer.from([0]), 9, target, (err) => finish(lanStatusFromError(err?.code), err?.code ?? null));
+  });
+}
+
 // ---------------------------------------------------------------- мини-XML
 
 const unescapeXml = (s) =>
