@@ -33,6 +33,7 @@
 
 ## Сборка
 - GitHub Actions: пуш в ветку `desktop-macos` или Actions → «Mantis для macOS» → Run workflow. Результат – предварительный релиз (prerelease) с `Mantis-Installer.pkg` и `Mantis.dmg`. В CI pkg ставится на macOS-машину (установка и повторная установка поверх), встроенный Агент запускается в обеих архитектурах (Intel – через Rosetta). Prerelease не становится «latest», поэтому прод-сервер его не забирает.
+- Раздача пользователям: «Деплой в прод» (задача `mac-app`) собирает приложение из того же коммита, что сайт, и выкладывает `Mantis-Installer.pkg` на https://mantis.rcmit.ru/downloads/Mantis-Installer.pkg. На него ведёт кнопка «Скачать для macOS» на шаге «Источник» → «IP-камера» (docs/agent.md).
 - Локально на Mac: `bash desktop/macos/build.sh` (одна версия для всех Mac) или `arm64` / `x64` для быстрой проверки → `desktop/macos/out/`.
 
 ## Подпись

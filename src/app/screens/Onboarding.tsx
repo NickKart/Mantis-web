@@ -4,13 +4,13 @@ import { IcArrow, IcCam, IcCheck, IcFunnel, IcLive, IcUser } from "../icons";
 import { MIN_PEOPLE, onboarding } from "../progress";
 import { Bar, type Screen, go, useCore } from "../ui";
 
-/** Сборки Mantis Агента – собирает «Деплой в прод» и кладёт на прод-сервер в downloads/ (docs/agent.md).
+/** Программы для компьютера у витрины (нужны для IP-камер) – собирает «Деплой в прод» и кладёт на прод-сервер
+ *  в downloads/ (docs/agent.md): для Windows – Mantis Агент, для Mac – приложение Mantis (установщик для всех Mac).
  *  Адреса полные: кнопки работают и на Vercel, и внутри самого Агента. */
 const DL = "https://mantis.rcmit.ru/downloads";
 export const AGENT_LINKS = {
   windows: `${DL}/Mantis-Agent-Windows.zip`,
-  mac: `${DL}/Mantis-Agent-macOS-arm64.zip`,
-  macIntel: `${DL}/Mantis-Agent-macOS-x64.zip`,
+  mac: `${DL}/Mantis-Installer.pkg`,
 };
 
 const STEPS: { title: string; time: string; cta: string; doneText: string; text: string; menu: string; Icon: typeof IcCam; screen: Screen }[] = [
