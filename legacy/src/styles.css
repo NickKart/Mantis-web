@@ -351,6 +351,10 @@ body.kiosk .panel { top: 12px; }
 .ip-section { display: flex; flex-direction: column; gap: 8px; padding: 14px 0; border-top: 1px solid var(--line); }
 .ip-section:first-of-type { border-top: 0; }
 .ip-section .field-label { margin: 4px 0 0; }
+.ip-desktop { border-top: 0; }
+.ip-desktop-title { margin: 0; font-size: 17px; }
+.ip-desktop-text { margin: 0; line-height: 1.45; }
+.ip-desktop-dl { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
 .row-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .actions.row { flex-direction: row; flex-wrap: wrap; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

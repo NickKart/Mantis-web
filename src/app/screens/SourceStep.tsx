@@ -1,11 +1,15 @@
-// Шаг «Источник»: камера компьютера / USB, IP-камера (через мост Mantis Агента) или видеофайл.
+// Шаг «Источник»: камера компьютера / USB, IP-камера или видеофайл.
+// IP-камеры – только в программе Mantis для компьютера (приложение для Mac, Агент для Windows): там есть мост к камерам.
+// В веб-версии вместо формы – предложение скачать программу и войти в ней тем же логином и паролем.
+import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { ChannelConfig } from "../../multi/channel";
 import { type FoundCamera, type IpCameraConfig, type LiveSource, listCameras, onvifStream, openIpCamera, openWebcam, scanCameras } from "../../sources";
 import { core } from "../core";
 import { IcApple, IcArrow, IcCam, IcFile, IcWifi, IcWindows } from "../icons";
-import { AGENT_LINKS } from "./Onboarding";
-import { go } from "../ui";
+import { abTrack } from "../../../ab/client";
+import { DESKTOP_LINKS, DESKTOP_TEXT, type DesktopOs, guessDesktopOs } from "../../downloads";
+import { go, useCore } from "../ui";
 
 type Kind = "webcam" | "ip" | "file";
 
@@ -18,6 +22,7 @@ const EXAMPLES = [
 
 export function SourceStep(p: { config: ChannelConfig | null; onNext: (src: { kind: "webcam" | "ip"; deviceId: string; ip: IpCameraConfig | null; label: string }) => void }) {
   const [kind, setKind] = useState<Kind>(p.config?.kind ?? "webcam");
+  const c = useCore();
   return (
     <div class="setup-body">
       <div class="setup-intro">
@@ -27,7 +32,7 @@ export function SourceStep(p: { config: ChannelConfig | null; onNext: (src: { ki
       <div class="src-kinds" role="radiogroup" aria-label="Тип источника">
         {([
           ["webcam", IcCam, "Камера компьютера или USB", "Встроенная камера, веб-камера, телефон как камера"],
-          ["ip", IcWifi, "IP-камера", "Wi-Fi или LAN-камера в сети магазина"],
+          ["ip", IcWifi, "IP-камера", c.bridge ? "Wi-Fi или LAN-камера в сети магазина" : "В программе Mantis для компьютера"],
           ["file", IcFile, "Видеофайл", "Проверить подсчёт на готовом ролике"],
         ] as [Kind, typeof IcCam, string, string][]).map(([k, Icon, t, d]) => (
           <button key={k} role="radio" aria-checked={kind === k} class="src-kind" onClick={() => (k === "file" ? go("setup", "video") : setKind(k))}>
@@ -129,7 +134,7 @@ type SourceStepNext = (src: { kind: "webcam" | "ip"; deviceId: string; ip: IpCam
 
 // ---------------------------------------------------------------- IP-камера
 function IpPick(p: { config: ChannelConfig | null; onNext: SourceStepNext }) {
-  const c = core;
+  const c = useCore();
   const [found, setFound] = useState<FoundCamera[] | null>(null);
   const [scanning, setScanning] = useState(false);
   const [cur, setCur] = useState<FoundCamera | null>(null);
@@ -141,20 +146,8 @@ function IpPick(p: { config: ChannelConfig | null; onNext: SourceStepNext }) {
   const [shot, setShot] = useState<{ cfg: IpCameraConfig; w: number; h: number } | null>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
 
-  if (c.bridge === false) {
-    return (
-      <section class="card">
-        <div class="card-head"><h2>IP-камеры подключаются через программу Mantis</h2></div>
-        <p class="lead">Браузер сам не умеет искать камеры в сети и читать RTSP. Установите Mantis на компьютер у витрины: программа находит ONVIF-камеры в сети и передаёт кадры нейросети. Видео и пароли не уходят в интернет.</p>
-        <div class="onb-dl">
-          <a class="btn lg" href={AGENT_LINKS.windows} download><IcWindows />Скачать для Windows</a>
-          <a class="btn lg" href={AGENT_LINKS.mac} download><IcApple />Скачать для macOS</a>
-        </div>
-        <p class="muted">macOS: приложение Mantis для всех Mac (M1 и новее, Intel), macOS 13 и новее. Откройте Mantis-Installer.pkg и нажмите «Установить». Если Mac не даёт открыть установщик – «Системные настройки» → «Конфиденциальность и безопасность» → «Всё равно открыть».</p>
-        <p class="muted">Windows: Mantis Агент. После распаковки откройте «Как запустить.txt».</p>
-      </section>
-    );
-  }
+  // IP-камеры – только в программе Mantis для компьютера (там есть мост). В веб-версии – предложение скачать её.
+  if (c.bridge !== true) return c.bridge === null ? <section class="card"><p class="muted">Проверяю…</p></section> : <DesktopOffer />;
 
   const scan = async () => {
     setScanning(true);
@@ -263,5 +256,32 @@ function IpPick(p: { config: ChannelConfig | null; onNext: SourceStepNext }) {
         </div>
       </aside>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------- веб-версия: IP-камеры – в программе для компьютера
+function DesktopOffer() {
+  const email = core.account.state.user?.email ?? "";
+  const os = guessDesktopOs();
+  useEffect(() => abTrack("desktop_offer", { os: os ?? "other" }), []);
+  const btn = (k: DesktopOs, icon: ComponentChildren, label: string) => (
+    <a class={`btn lg${os === k ? " primary" : ""}`} href={DESKTOP_LINKS[k]} download onClick={() => abTrack("desktop_download", { os: k })}>
+      {icon}{label}
+    </a>
+  );
+  return (
+    <section class="card">
+      <div class="card-head"><h2>{DESKTOP_TEXT.title}</h2></div>
+      <p class="lead">{DESKTOP_TEXT.lead}</p>
+      <p class="lead">{DESKTOP_TEXT.login}{email && <> Ваш логин: <b>{email}</b>.</>}</p>
+      <div class="onb-dl">
+        {os === "windows"
+          ? [btn("windows", <IcWindows />, "Скачать для Windows"), btn("mac", <IcApple />, "Скачать для macOS")]
+          : [btn("mac", <IcApple />, "Скачать для macOS"), btn("windows", <IcWindows />, "Скачать для Windows")]}
+      </div>
+      <p class="muted">macOS: {DESKTOP_TEXT.mac}</p>
+      <p class="muted">Windows: {DESKTOP_TEXT.windows}</p>
+      <p class="muted">{DESKTOP_TEXT.webcam}</p>
+    </section>
   );
 }
