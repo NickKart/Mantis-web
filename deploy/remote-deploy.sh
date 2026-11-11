@@ -3,7 +3,7 @@
 #   bash remote-deploy.sh /tmp/mantis-<sha>.tar.gz <sha>
 # Распаковывает в /var/www/mantis/releases/<sha>, обновляет схему базы, переключает current,
 # перезапускает API и проверяет его. Если API не поднялся – возвращает предыдущий релиз.
-# В конце забирает из релиза новые архивы Mantis Агента и установщик Mantis для Mac в shared/downloads (dist/downloads – ссылка туда).
+# В конце забирает из релиза новые архивы Mantis Агента и установщики Mantis для Mac и Windows в shared/downloads (dist/downloads – ссылка туда).
 
 set -euo pipefail
 
@@ -64,12 +64,12 @@ ls -1t | tail -n +$((KEEP + 1)) | while read -r old; do
   [ "$ROOT/releases/$old" = "$(readlink -f "$ROOT/current")" ] || rm -rf -- "$old"
 done
 
-echo "== Файлы для скачивания (Mantis Агент, Mantis для Mac)"
+echo "== Файлы для скачивания (Mantis Агент, Mantis для Mac и Windows)"
 # Скачиваем только изменившиеся файлы, с проверкой sha256. Неудача не ломает выкладку – останутся прежние.
 BASE="${MANTIS_RELEASE_URL:-https://github.com/NickKart/mantis-web/releases/latest/download}"
 if [ -f "$REL/agent.sha256" ]; then
   while read -r sum name; do
-    case "$name" in Mantis-Agent-*.zip|Mantis-Installer.pkg) ;; *) continue ;; esac
+    case "$name" in Mantis-Agent-*.zip|Mantis-Installer.pkg|Mantis-Setup.exe) ;; *) continue ;; esac
     if [ -f "$DL/$name" ] && echo "$sum  $DL/$name" | sha256sum -c --quiet >/dev/null 2>&1; then
       echo "   $name – без изменений"
       continue

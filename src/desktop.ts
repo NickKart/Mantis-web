@@ -143,12 +143,14 @@ export function reportPilotRunning(running: boolean): void {
   void call("pilot_state", { running });
 }
 
-// ---------------------------------------------------------------- подготовка Mac (desktop-setup.html)
+// ---------------------------------------------------------------- подготовка Mac / компьютера (desktop-setup.html)
 
-/** Разделы «Системных настроек» macOS, которые может открыть оболочка. */
-export type SettingsPane = "local-network" | "camera" | "login-items" | "security";
+/** Разделы настроек системы, которые может открыть оболочка.
+ *  macOS («Системные настройки»): local-network, camera, login-items, security.
+ *  Windows («Параметры»): camera, login-items (автозагрузка), network, power. */
+export type SettingsPane = "local-network" | "camera" | "login-items" | "security" | "network" | "power";
 
-/** Открыть нужный раздел «Системных настроек» (только приложение для Mac). */
+/** Открыть нужный раздел настроек системы (только настольное приложение). */
 export async function openSettings(pane: SettingsPane): Promise<boolean> {
   return (await call<boolean>("open_settings", { pane })) ?? false;
 }

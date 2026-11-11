@@ -1,8 +1,10 @@
-// «Подготовка Mac» – первый запуск приложения Mantis для macOS (desktop-setup.html).
-// По шагам: приложение в «Программах», доступ к локальной сети (IP-камеры), камера Mac, автозапуск, питание.
-// Перед каждым системным вопросом macOS объясняем простыми словами, что нажать; если доступ запрещён –
-// кнопка открывает нужный раздел «Системных настроек». Шаги необязательные, «Готово» – всегда доступно.
-// Оболочка открывает эту страницу сама при первом запуске и по меню «Mantis → Подготовка Mac…».
+// «Подготовка Mac» / «Подготовка компьютера» – первый запуск настольного приложения Mantis (desktop-setup.html).
+// macOS: приложение в «Программах», доступ к локальной сети (IP-камеры), камера Mac, автозапуск, питание.
+// Windows: сеть магазина, камера, автозапуск, питание (установщик уже поставил приложение и правило брандмауэра).
+// Перед каждым системным вопросом объясняем простыми словами, что нажать; если доступ запрещён –
+// кнопка открывает нужный раздел настроек системы. Шаги необязательные, «Готово» – всегда доступно.
+// Оболочка открывает эту страницу сама при первом запуске и по меню «Mantis → Подготовка Mac…»
+// (Windows – значок Mantis у часов → «Подготовка компьютера…»).
 
 import "@fontsource-variable/inter/index.css";
 import { desktopInfo, desktopShell, installState, moveToApplications, openSettings, setAutostart, setupDone } from "../desktop";
@@ -22,7 +24,23 @@ interface Step {
 }
 
 const root = document.getElementById("setup")!;
-const inApp = desktopShell === "macos";
+/** Windows: приложение для Windows или эта страница в браузере на Windows. */
+const win = desktopShell ? desktopShell === "windows" : /Windows/i.test(navigator.userAgent);
+const inApp = desktopShell === (win ? "windows" : "macos");
+const T = win
+  ? {
+      title: "Подготовка компьютера",
+      appName: "приложения Mantis для Windows",
+      settings: "«Параметры Windows»",
+      menu: "значок Mantis у часов → «Подготовка компьютера…»",
+    }
+  : {
+      title: "Подготовка Mac",
+      appName: "приложения Mantis для Mac",
+      settings: "«Системные настройки»",
+      menu: "меню «Mantis» → «Подготовка Mac…»",
+    };
+document.title = `Mantis – ${T.title.toLowerCase()}`;
 
 const style = document.createElement("style");
 style.textContent = `
@@ -68,7 +86,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // ---------------------------------------------------------------- шаги
 
-const steps: Step[] = [
+const allSteps: Step[] = [
   {
     id: "install",
     title: "Mantis в папке «Программы»",
@@ -79,23 +97,25 @@ const steps: Step[] = [
   },
   {
     id: "lan",
-    title: "Доступ к локальной сети",
-    why: "Нужен, чтобы находить IP-камеры в сети магазина и получать с них видео. Видео никуда не отправляется.",
+    title: win ? "Сеть магазина для IP-камер" : "Доступ к локальной сети",
+    why: win
+      ? "Компьютер должен быть в той же сети, что и IP-камеры: Mantis находит их и получает видео. Видео никуда не отправляется."
+      : "Нужен, чтобы находить IP-камеры в сети магазина и получать с них видео. Видео никуда не отправляется.",
     state: "todo",
     note: "",
     actions: [],
   },
   {
     id: "camera",
-    title: "Камера Mac или USB-камера",
-    why: "Если витрину снимает камера, подключённая к этому Mac. Для IP-камер не нужно.",
+    title: win ? "Камера компьютера или USB-камера" : "Камера Mac или USB-камера",
+    why: `Если витрину снимает камера, подключённая к этому ${win ? "компьютеру" : "Mac"}. Для IP-камер не нужно.`,
     state: "todo",
     note: "",
     actions: [],
   },
   {
     id: "autostart",
-    title: "Запуск вместе с Mac",
+    title: win ? "Запуск вместе с Windows" : "Запуск вместе с Mac",
     why: "После перезагрузки или отключения света Mantis сам откроется и продолжит подсчёт.",
     state: "todo",
     note: "",
@@ -103,14 +123,18 @@ const steps: Step[] = [
   },
   {
     id: "power",
-    title: "Mac не засыпает во время подсчёта",
-    why: "Mantis сам не даёт Mac и экрану уснуть, пока идёт подсчёт. Для работы весь день подключите Mac к питанию.",
+    title: win ? "Компьютер не засыпает во время подсчёта" : "Mac не засыпает во время подсчёта",
+    why: win
+      ? "Mantis сам не даёт компьютеру и экрану уснуть, пока идёт подсчёт. Ноутбук для работы весь день подключите к питанию."
+      : "Mantis сам не даёт Mac и экрану уснуть, пока идёт подсчёт. Для работы весь день подключите Mac к питанию.",
     state: "ok",
     note: "Ничего делать не нужно",
     actions: [],
   },
 ];
 
+// на Windows шага «Программы» нет: приложение ставит установщик
+const steps = win ? allSteps.filter((s) => s.id !== "install") : allSteps;
 const step = (id: string) => steps.find((s) => s.id === id)!;
 
 function set(id: string, patch: Partial<Step>): void {
@@ -123,7 +147,7 @@ function set(id: string, patch: Partial<Step>): void {
 async function checkInstall(): Promise<void> {
   const st = await installState();
   if (!st) {
-    set("install", { state: "info", note: inApp ? "Не удалось проверить" : "Эта страница – для приложения Mantis для Mac", actions: [] });
+    set("install", { state: "info", note: inApp ? "Не удалось проверить" : `Эта страница – для ${T.appName}`, actions: [] });
     return;
   }
   if (st.inApplications) {
@@ -172,13 +196,13 @@ async function askLan(): Promise<void> {
   }
   set("lan", {
     state: "wait",
-    note: "Жду ответа…",
-    ask: "Сейчас macOS спросит: «Разрешить приложению Mantis находить устройства в локальной сети?» – нажмите <b>«Разрешить»</b>.",
+    note: win ? "Проверяю…" : "Жду ответа…",
+    ask: win ? undefined : "Сейчас macOS спросит: «Разрешить приложению Mantis находить устройства в локальной сети?» – нажмите <b>«Разрешить»</b>.",
     actions: [],
   });
   // Первая попытка показывает системный вопрос. Пока он на экране, macOS отвечает «нет доступа» или молчит,
   // поэтому повторяем проверку до 20 секунд: разрешили – сразу «Доступ есть», иначе – подсказка с настройками.
-  const until = Date.now() + 20_000;
+  const until = Date.now() + (win ? 4_000 : 20_000);
   let st = await lanCheck();
   while (st !== "allowed" && st !== "no-network" && Date.now() < until) {
     await sleep(1500);
@@ -192,17 +216,19 @@ function showLan(st: LanResult["status"]): void {
   else if (st === "no-network")
     set("lan", {
       state: "info",
-      note: "Mac не подключён к сети. Подключите его к Wi-Fi или кабелю магазина и проверьте снова.",
+      note: `${win ? "Компьютер" : "Mac"} не подключён к сети. Подключите его к Wi-Fi или кабелю магазина и проверьте снова.`,
       ask: undefined,
       actions: [{ label: "Проверить снова", run: askLan }],
     });
   else
     set("lan", {
       state: "bad",
-      note: "Доступ запрещён – IP-камеры не найдутся.",
-      ask: "Откройте настройки и включите переключатель <b>Mantis</b> в разделе «Локальная сеть», затем вернитесь сюда.",
+      note: win ? "Нет доступа к сети магазина – IP-камеры не найдутся." : "Доступ запрещён – IP-камеры не найдутся.",
+      ask: win
+        ? "Проверьте, что компьютер подключён к сети магазина. Если стоит антивирус со своим брандмауэром – разрешите в нём программу <b>Mantis</b>."
+        : "Откройте настройки и включите переключатель <b>Mantis</b> в разделе «Локальная сеть», затем вернитесь сюда.",
       actions: [
-        { label: "Открыть настройки", kind: "primary", run: () => void openSettings("local-network") },
+        { label: "Открыть настройки", kind: "primary", run: () => void openSettings(win ? "network" : "local-network") },
         { label: "Проверить снова", run: askLan },
         { label: "IP-камер нет – пропустить", kind: "ghost", run: () => set("lan", { state: "skip", note: "Пропущено", ask: undefined, actions: [{ label: "Разрешить", run: askLan }] }) },
       ],
@@ -224,7 +250,7 @@ async function askCamera(): Promise<void> {
   set("camera", {
     state: "wait",
     note: "Жду ответа…",
-    ask: "Сейчас macOS спросит доступ к камере – нажмите <b>«Разрешить»</b>.",
+    ask: win ? undefined : "Сейчас macOS спросит доступ к камере – нажмите <b>«Разрешить»</b>.",
     actions: [],
   });
   try {
@@ -244,8 +270,12 @@ async function askCamera(): Promise<void> {
     }
     set("camera", {
       state: "bad",
-      note: "Доступ к камере запрещён.",
-      ask: "Откройте настройки и включите переключатель <b>Mantis</b> в разделе «Камера», затем перезапустите Mantis.",
+      note: win && name === "NotReadableError" ? "Камера занята другой программой (например, видеозвонком)." : "Доступ к камере запрещён.",
+      ask: win
+        ? name === "NotReadableError"
+          ? "Закройте программу, которая пользуется камерой, и проверьте снова."
+          : "Откройте настройки и включите <b>«Доступ к камере»</b> и <b>«Разрешить классическим приложениям доступ к камере»</b>, затем перезапустите Mantis."
+        : "Откройте настройки и включите переключатель <b>Mantis</b> в разделе «Камера», затем перезапустите Mantis.",
       actions: [
         { label: "Открыть настройки", kind: "primary", run: () => void openSettings("camera") },
         { label: "Проверить снова", run: askCamera },
@@ -260,7 +290,7 @@ const cameraTodo = (): Partial<Step> => ({
   ask: undefined,
   actions: [
     { label: "Разрешить камеру", kind: "primary", run: askCamera },
-    { label: "Только IP-камеры – пропустить шаг 3", kind: "ghost", run: () => set("camera", { state: "skip", note: "Пропущено", actions: [{ label: "Разрешить камеру", run: askCamera }] }) },
+    { label: "Только IP-камеры – пропустить", kind: "ghost", run: () => set("camera", { state: "skip", note: "Пропущено", actions: [{ label: "Разрешить камеру", run: askCamera }] }) },
   ],
 });
 
@@ -276,16 +306,16 @@ function showAutostart(on: boolean, failed = false): void {
   if (failed) {
     set("autostart", {
       state: "bad",
-      note: "Не получилось. Можно включить вручную в «Объектах входа».",
+      note: win ? "Не получилось. Можно включить вручную в разделе «Автозагрузка»." : "Не получилось. Можно включить вручную в «Объектах входа».",
       actions: [
         { label: "Попробовать снова", kind: "primary", run: () => autostart(true) },
-        { label: "Открыть «Объекты входа»", run: () => void openSettings("login-items") },
+        { label: win ? "Открыть «Автозагрузку»" : "Открыть «Объекты входа»", run: () => void openSettings("login-items") },
       ],
     });
   } else if (on) {
     set("autostart", {
       state: "ok",
-      note: "Включено. macOS может показать уведомление «Добавлены объекты входа» – это нормально.",
+      note: win ? "Включено. Mantis откроется после входа в Windows." : "Включено. macOS может показать уведомление «Добавлены объекты входа» – это нормально.",
       actions: [{ label: "Выключить", kind: "ghost", run: () => autostart(false) }],
     });
   } else {
@@ -306,9 +336,9 @@ function render(): void {
   const done = steps.filter((s) => s.state === "ok" || s.state === "skip" || s.state === "info").length;
   const current = steps.find((s) => s.state === "todo" || s.state === "bad" || s.state === "wait");
   root.innerHTML = `
-    <div class="head"><div class="logo">M</div><div><h1>Подготовка Mac</h1></div></div>
-    <p class="lead">Пять шагов, чтобы Mantis считал посетителей без перерывов. Каждый шаг можно пропустить и вернуться к нему позже: меню «Mantis» → «Подготовка Mac…».</p>
-    ${inApp ? "" : `<div class="warn">Эта страница – для приложения Mantis для Mac. В браузере часть шагов недоступна.</div>`}
+    <div class="head"><div class="logo">M</div><div><h1>${T.title}</h1></div></div>
+    <p class="lead">${steps.length === 4 ? "Четыре шага" : "Пять шагов"}, чтобы Mantis считал посетителей без перерывов. Каждый шаг можно пропустить и вернуться к нему позже: ${T.menu}.</p>
+    ${inApp ? "" : `<div class="warn">Эта страница – для ${T.appName}. В браузере часть шагов недоступна.</div>`}
     <div class="progress"><i style="width:${(done / steps.length) * 100}%"></i></div>
     ${steps
       .map((s, i) => `
@@ -335,7 +365,7 @@ function render(): void {
   });
   document.getElementById("finish")!.onclick = async () => {
     await setupDone();
-    location.href = `./?desktop=${desktopShell ?? "macos"}`;
+    location.href = `./?desktop=${desktopShell ?? (win ? "windows" : "macos")}`;
   };
 }
 
@@ -353,14 +383,15 @@ async function start(): Promise<void> {
   showAutostart(false);
   render();
 
-  void checkInstall();
+  if (!win) void checkInstall();
   // уже разрешённое показываем сразу, без системных вопросов
   const [cam, info] = await Promise.all([cameraPermission(), desktopInfo()]);
   if (cam === "granted") set("camera", { state: "ok", note: "Доступ есть", actions: [] });
   if (info?.autostart) showAutostart(true);
-  // доступ к сети проверяем молча, только если он уже был дан раньше (иначе это вызовет вопрос macOS до объяснения)
+  // доступ к сети проверяем молча, только если он уже был дан раньше (иначе это вызовет вопрос macOS до объяснения).
+  // На Windows системного вопроса нет – проверяем сразу.
   try {
-    if (localStorage.getItem("mantis.setup.lan") === "asked" && (await lanCheck()) === "allowed") showLan("allowed");
+    if ((win || localStorage.getItem("mantis.setup.lan") === "asked") && (await lanCheck()) === "allowed") showLan("allowed");
   } catch {
     /* нет хранилища */
   }
