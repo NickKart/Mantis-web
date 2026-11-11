@@ -114,13 +114,28 @@ jobs:
           $null = WaitAgent 60
           Start-Process $setup -ArgumentList "/S" -Wait
           if (!(Test-Path "$dir\mantis.exe")) { throw "после обновления нет mantis.exe" }
+          # «Подготовка» пройдена – открывается главная страница Mantis
+          New-Item -ItemType Directory -Force "$env:APPDATA\ru.rcmit.mantis" | Out-Null
+          Set-Content "$env:APPDATA\ru.rcmit.mantis\setup-done" "1"
           Start-Process "$dir\mantis.exe"
           $null = WaitAgent 60
+          Start-Sleep 10
+          Shot "2-main-after-update"
+          Stop-Process -Name mantis -Force
           Start-Sleep 8
-          Shot "2-after-update"
+
+          "== Проверка компьютера в окне приложения (связь с приложением, многопоточность, WebGPU)"
+          $env:MANTIS_START_PAGE = "desktop-check.html"
+          Start-Process "$dir\mantis.exe"
+          $null = WaitAgent 60
+          Start-Sleep 15
+          Shot "3-desktop-check"
+          Remove-Item Env:MANTIS_START_PAGE
           Get-Process mantis | ForEach-Object { $_.CloseMainWindow() | Out-Null }
           Start-Sleep 5
-          Get-Process mantis, mantis-agent -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (Get-Process mantis -ErrorAction SilentlyContinue) { throw "крестик не закрыл Mantis (подсчёт не шёл)" }
+          for ($i = 0; $i -lt 10 -and (Get-Process mantis-agent -ErrorAction SilentlyContinue); $i++) { Start-Sleep 1 }
+          if (Get-Process mantis-agent -ErrorAction SilentlyContinue) { throw "после закрытия окна остался Агент" }
 
           "== Удаление"
           Start-Process "$dir\uninstall.exe" -ArgumentList "/S" -Wait

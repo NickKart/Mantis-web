@@ -199,10 +199,14 @@ fn install_state() -> InstallState {
 }
 
 /// Первая страница после запуска: «Подготовка компьютера», пока её не прошли, иначе – Mantis.
-fn first_page(app: &AppHandle) -> &'static str {
+/// MANTIS_START_PAGE – для проверки в CI (например, desktop-check.html: связь страницы с приложением, WebGPU).
+fn first_page(app: &AppHandle) -> String {
+    if let Ok(p) = std::env::var("MANTIS_START_PAGE") {
+        return format!("{p}?desktop=windows");
+    }
     match setup_flag(app) {
-        Some(f) if f.exists() => "?desktop=windows",
-        _ => "desktop-setup.html?desktop=windows",
+        Some(f) if f.exists() => "?desktop=windows".into(),
+        _ => "desktop-setup.html?desktop=windows".into(),
     }
 }
 
@@ -261,7 +265,7 @@ fn start_agent(app: &AppHandle) -> Result<(), String> {
                     if let Some(port) = s.strip_prefix("MANTIS_READY port=") {
                         let page = format!("http://127.0.0.1:{}/", port.trim());
                         *app.state::<Shell>().page.lock().unwrap() = Some(page);
-                        open_page(&app, first_page(&app));
+                        open_page(&app, &first_page(&app));
                     } else if !s.is_empty() {
                         tail.push(s);
                         if tail.len() > 20 {
