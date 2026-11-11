@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Mantis",
+  "mainBinaryName": "mantis",
+  "version": "0.1.0",
+  "identifier": "ru.rcmit.mantis",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "РСМ АйТи",
+    "homepage": "https://mantis.rcmit.ru",
+    "copyright": "© РСМ АйТи",
+    "category": "Business",
+    "shortDescription": "Подсчёт посетителей витрины",
+    "longDescription": "Mantis считает по видео с камеры, сколько людей прошло мимо витрины, посмотрело на неё и зашло в магазин.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "externalBin": ["binaries/mantis-agent"],
+    "windows": {
+      "webviewInstallMode": { "type": "embedBootstrapper" },
+      "minimumWebview2Version": "120.0.0.0",
+      "nsis": {
+        "installMode": "perMachine",
+        "languages": ["Russian"],
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "../nsis/header.bmp",
+        "sidebarImage": "../nsis/sidebar.bmp",
+        "installerHooks": "../nsis/hooks.nsh",
+        "compression": "lzma"
+      }
+    }
+  }
+}

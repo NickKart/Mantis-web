@@ -1,5 +1,5 @@
 // Проверка компьютера для настольного приложения Mantis (desktop-check.html).
-// Одна и та же страница открывается в приложении для Mac и в Chrome на том же Mac – результаты сравниваются.
+// Одна и та же страница открывается в приложении (Mac или Windows) и в Chrome на том же компьютере – результаты сравниваются.
 // Проверяет: изоляцию страницы (многопоточность), WebGPU, скорость нейросети на видеокарте и процессоре,
 // камеру и работу подсчёта, когда окно свёрнуто или на экране другое приложение.
 
@@ -45,7 +45,7 @@ document.head.insertAdjacentHTML("beforeend", `<style>${css}</style>`);
 root.innerHTML = `
 <div class="wrap">
   <h1>Проверка компьютера для Mantis</h1>
-  <p class="sub">Откройте эту страницу в приложении Mantis и в Chrome на этом же Mac, затем нажмите «Скопировать результаты» в обоих и пришлите. <a href="./">Вернуться в Mantis</a></p>
+  <p class="sub">Откройте эту страницу в приложении Mantis и в Chrome на этом же компьютере, затем нажмите «Скопировать результаты» в обоих и пришлите. <a href="./">Вернуться в Mantis</a></p>
 
   <section>
     <h2>1. Окружение</h2>
@@ -62,7 +62,7 @@ root.innerHTML = `
 
   <section>
     <h2>3. Камера</h2>
-    <p class="hint">Mac спросит разрешение на камеру – разрешите.</p>
+    <p class="hint">Если система спросит разрешение на камеру – разрешите.</p>
     <button id="b-cam">Проверить камеру</button>
     <video id="v" muted playsinline autoplay></video>
     <table id="t-cam"></table>
@@ -108,7 +108,8 @@ const fps = (msPerFrame: number) => (msPerFrame > 0 ? `${(1000 / msPerFrame).toF
 async function checkEnv(): Promise<void> {
   const t = "t-env";
   const ua = navigator.userAgent;
-  const browser = /Chrome\/(\d+)/.exec(ua)?.[0] ?? (/Version\/([\d.]+).*Safari/.exec(ua) ? `WebKit, Safari ${/Version\/([\d.]+)/.exec(ua)![1]}` : "WebKit (системный движок macOS)");
+  const edge = /Edg\/(\d+)/.exec(ua)?.[1];
+  const browser = (edge && desktopShell ? `WebView2 (Edge ${edge})` : null) ?? /Chrome\/(\d+)/.exec(ua)?.[0] ?? (/Version\/([\d.]+).*Safari/.exec(ua) ? `WebKit, Safari ${/Version\/([\d.]+)/.exec(ua)![1]}` : "WebKit (системный движок macOS)");
   setRow(t, { key: "where", label: "Где открыто", value: desktopShell ? `приложение Mantis (${desktopShell})` : "браузер", status: "info" });
   setRow(t, { key: "engine", label: "Движок", value: browser, status: "info" });
   setRow(t, { key: "cores", label: "Ядер процессора", value: String(navigator.hardwareConcurrency || "?"), status: "info" });

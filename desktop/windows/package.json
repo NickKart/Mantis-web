@@ -1,0 +1,11 @@
+{
+  "name": "mantis-windows",
+  "private": true,
+  "description": "Mantis для Windows: сборка настольного приложения (Tauri). Запуск – bash desktop/windows/build.sh (Git Bash на Windows)",
+  "scripts": {
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.4"
+  }
+}

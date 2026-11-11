@@ -1,0 +1,164 @@
+# Mantis для Windows: окно приложения (Tauri, WebView2) + встроенный Агент, установщик Mantis-Setup.exe.
+# Запуск: пуш в ветку desktop-windows (или desktop-windows-*) или вручную (Actions → «Mantis для Windows» → Run workflow).
+# Проверка на windows-latest: тихая установка, первый запуск (Агент отвечает, окно на экране – снимок),
+# Агент закрывается вместе с приложением, установка поверх (как обновление), удаление.
+# Результат – предварительный релиз GitHub (prerelease) с Mantis-Setup.exe.
+# Prerelease не помечается «latest», поэтому прод-сервер (mantis-update.timer) его не трогает.
+
+name: Mantis для Windows
+
+on:
+  push:
+    branches: [desktop-windows, desktop-windows-*]
+  workflow_dispatch:
+
+concurrency:
+  group: desktop-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/windows/src-tauri -> target
+
+      - name: Зависимости
+        run: npm ci --ignore-scripts
+
+      - name: Сборка
+        run: BUN="$(command -v bun)" bash desktop/windows/build.sh
+
+      - name: Установка, первый запуск, закрытие, обновление, удаление
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $setup = "desktop/windows/out/Mantis-Setup.exe"
+          $dir = "C:\Program Files\Mantis"
+          New-Item -ItemType Directory -Force shots | Out-Null
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          function Shot($name) {
+            $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+            $bmp.Save("shots/$name.png")
+          }
+          function WaitAgent($sec) {
+            for ($i = 0; $i -lt $sec; $i++) {
+              try { return Invoke-RestMethod -TimeoutSec 2 http://127.0.0.1:8797/api/agent } catch { Start-Sleep 1 }
+            }
+            throw "Встроенный Агент не ответил за $sec с"
+          }
+
+          "== Тихая установка"
+          Start-Process $setup -ArgumentList "/S" -Wait
+          Get-ChildItem $dir | Format-Table Name, Length
+          if (!(Test-Path "$dir\mantis.exe") -or !(Test-Path "$dir\mantis-agent.exe")) { throw "файлы не установлены" }
+          (Get-Item "$dir\mantis.exe").VersionInfo | Format-List ProductName, ProductVersion, CompanyName
+          netsh advfirewall firewall show rule name="Mantis IP cameras"
+          if ($LASTEXITCODE -ne 0) { throw "нет правила брандмауэра" }
+          Get-ChildItem "C:\ProgramData\Microsoft\Windows\Start Menu\Programs" -Filter "Mantis*" -Recurse | Select-Object FullName
+          Get-ChildItem "C:\Users\Public\Desktop" -Filter "Mantis*" | Select-Object FullName
+
+          "== Первый запуск"
+          Start-Process "$dir\mantis.exe"
+          $a = WaitAgent 60
+          $a | ConvertTo-Json -Compress
+          if ($a.shell -ne "windows") { throw "Агент запущен не приложением (shell=$($a.shell))" }
+          $h = Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8797/desktop-setup.html
+          if ($h.Headers["Cross-Origin-Embedder-Policy"] -ne "require-corp") { throw "нет COEP" }
+          "desktop-setup.html: $($h.StatusCode), COOP=$($h.Headers['Cross-Origin-Opener-Policy'])"
+          Invoke-RestMethod http://127.0.0.1:8797/api/lan-check | ConvertTo-Json -Compress
+          Start-Sleep 12
+          Shot "1-first-run"
+          Get-Process mantis, mantis-agent | Format-Table Id, ProcessName, MainWindowTitle, WorkingSet64
+
+          "== Повторный запуск – второго окна нет"
+          Start-Process "$dir\mantis.exe"
+          Start-Sleep 5
+          $n = @(Get-Process mantis -ErrorAction SilentlyContinue).Count
+          "процессов mantis: $n"
+          if ($n -ne 1) { throw "запущено $n копий Mantis" }
+
+          "== Приложение закрылось аварийно – Агент выключается сам"
+          Stop-Process -Name mantis -Force
+          for ($i = 0; $i -lt 20 -and (Get-Process mantis-agent -ErrorAction SilentlyContinue); $i++) { Start-Sleep 1 }
+          if (Get-Process mantis-agent -ErrorAction SilentlyContinue) { throw "Агент остался работать без приложения" }
+          "Агент выключился за $i с"
+
+          "== Установка поверх запущенного Mantis (обновление)"
+          Start-Process "$dir\mantis.exe"
+          $null = WaitAgent 60
+          Start-Process $setup -ArgumentList "/S" -Wait
+          if (!(Test-Path "$dir\mantis.exe")) { throw "после обновления нет mantis.exe" }
+          Start-Process "$dir\mantis.exe"
+          $null = WaitAgent 60
+          Start-Sleep 8
+          Shot "2-after-update"
+          Get-Process mantis | ForEach-Object { $_.CloseMainWindow() | Out-Null }
+          Start-Sleep 5
+          Get-Process mantis, mantis-agent -ErrorAction SilentlyContinue | Stop-Process -Force
+
+          "== Удаление"
+          Start-Process "$dir\uninstall.exe" -ArgumentList "/S" -Wait
+          Start-Sleep 5
+          if (Test-Path "$dir\mantis.exe") { throw "после удаления остался mantis.exe" }
+          netsh advfirewall firewall show rule name="Mantis IP cameras" | Out-Null
+          if ($LASTEXITCODE -eq 0) { throw "после удаления осталось правило брандмауэра" }
+          "Удалено"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots-windows
+          path: shots
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mantis-Windows
+          path: desktop/windows/out/Mantis-Setup.exe
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Mantis-Windows
+          path: out
+      - name: Предварительный релиз
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="windows-v$VERSION-$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}"
+          (cd out && sha256sum Mantis-Setup.exe > SHA256SUMS.txt)
+          gh release create "$TAG" out/Mantis-Setup.exe out/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --prerelease --latest=false --title "Mantis для Windows $VERSION (проверка)" \
+            --notes "Windows 10 и 11 (64-бит). Установка: скачать Mantis-Setup.exe, открыть, «Установить». Пока без подписи кода: если Windows покажет «Система Windows защитила ваш компьютер» – «Подробнее» → «Выполнить в любом случае»."
