@@ -1,9 +1,14 @@
 // Окно «IP-камера» — как настройки IP-камеры в iOS: поиск в сети, вход по ONVIF, шаблоны марок, ручной адрес.
 // Результат — подключённый источник кадров и настройки, которые можно сохранить для пилота.
+// IP-камеры работают только в программе Mantis для компьютера (там есть мост). В веб-версии окно предлагает
+// скачать программу и войти в ней тем же логином и паролем – тексты и ссылки общие с версией A (src/downloads.ts).
 
 import {
   type FoundCamera, type IpCameraConfig, type LiveSource, bridgeInfo, loadIpCamera, onvifStream, openIpCamera, scanCameras,
 } from "../sources";
+import { abTrack } from "../../../ab/client";
+import { DESKTOP_LINKS, DESKTOP_TEXT, type DesktopOs, guessDesktopOs } from "../../../src/downloads";
+import { currentUser } from "../cloud/firebase";
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -28,6 +33,54 @@ function show(section: "find" | "login" | "brand"): void {
   $("#ip-login").hidden = section !== "login";
   $("#ip-brand").hidden = section !== "brand";
   $("#ip-manual").hidden = section !== "find";
+}
+
+/** Веб-версия: вместо поиска и подключения – предложение скачать Mantis для компьютера. */
+function showDesktopOffer(): void {
+  const box = $("#ip-desktop");
+  const os = guessDesktopOs();
+  const p = (text: string, cls = "hint-small") => {
+    const e = document.createElement("p");
+    e.className = cls;
+    e.textContent = text;
+    return e;
+  };
+  const h = document.createElement("h3");
+  h.className = "ip-desktop-title";
+  h.textContent = DESKTOP_TEXT.title;
+  const login = p(DESKTOP_TEXT.login, "ip-desktop-text");
+  const email = currentUser()?.email;
+  if (email) {
+    const b = document.createElement("b");
+    b.textContent = email;
+    login.append(" Ваш логин: ", b, ".");
+  }
+  const link = (k: DesktopOs, label: string) => {
+    const a = document.createElement("a");
+    a.className = os === k ? "btn primary" : "btn";
+    a.href = DESKTOP_LINKS[k];
+    a.setAttribute("download", "");
+    a.textContent = label;
+    a.addEventListener("click", () => abTrack("desktop_download", { os: k }));
+    return a;
+  };
+  const row = document.createElement("div");
+  row.className = "ip-desktop-dl";
+  const mac = link("mac", "Скачать для macOS");
+  const win = link("windows", "Скачать для Windows");
+  row.append(...(os === "windows" ? [win, mac] : [mac, win]));
+  box.replaceChildren(
+    h,
+    p(DESKTOP_TEXT.lead, "ip-desktop-text"),
+    login,
+    row,
+    p(`macOS: ${DESKTOP_TEXT.mac}`),
+    p(`Windows: ${DESKTOP_TEXT.windows}`),
+    p(DESKTOP_TEXT.webcam),
+  );
+  box.hidden = false;
+  for (const id of ["#ip-find", "#ip-login", "#ip-brand", "#ip-manual", "#ip-noffmpeg"]) $(id).hidden = true;
+  abTrack("desktop_offer", { os: os ?? "other" });
 }
 
 function setError(text: string | null): void {
@@ -258,10 +311,14 @@ export async function chooseIpCamera(): Promise<{ cfg: IpCameraConfig; source: L
     $<HTMLInputElement>("#ip-pass").value = saved.password;
     titleHint = saved.title;
   }
+  $("#ip-desktop").hidden = true;
   dialog().showModal();
   const info = await bridgeInfo();
-  $("#ip-nobridge").hidden = !!info;
-  $("#ip-noffmpeg").hidden = !info || !!info.ffmpeg;
+  if (!info) {
+    showDesktopOffer();
+    return new Promise((resolve) => (resolver = resolve));
+  }
+  $("#ip-noffmpeg").hidden = !!info.ffmpeg;
   const usable = !!info?.ffmpeg;
   $<HTMLButtonElement>("#ip-scan").disabled = !info;
   $<HTMLButtonElement>("#ip-connect").disabled = !usable;

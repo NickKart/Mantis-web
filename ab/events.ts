@@ -23,6 +23,8 @@ export const AB_EVENTS = [
   "report_exported", // выгрузил отчёт
   "subscription_open", // открыл подписку
   "payment_start", // перешёл к оплате или привязке карты {kind}
+  "desktop_offer", // в веб-версии открыл подключение IP-камеры – показано предложение скачать программу {os}
+  "desktop_download", // нажал «Скачать» программу Mantis для компьютера {os}
   "error", // заметная ошибка {where}
 ] as const;
 

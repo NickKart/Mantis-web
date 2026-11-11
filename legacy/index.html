@@ -368,10 +368,8 @@
           <button class="icon-btn" value="close" type="submit" formnovalidate aria-label="Закрыть">✕</button>
         </div>
 
-        <div class="warn" id="ip-nobridge" hidden>
-          Поиск и подключение IP-камер работают, когда Mantis запущен на этом компьютере: <code>npm run dev</code> или <code>npm run serve</code> в папке <code>web</code>.
-          Компьютер и камера должны быть в одной сети.
-        </div>
+        <!-- Веб-версия: IP-камеры – только в программе Mantis для компьютера (заполняет src/ui/ipcam.ts) -->
+        <section class="ip-section ip-desktop" id="ip-desktop" hidden></section>
         <div class="warn" id="ip-noffmpeg" hidden>
           Для IP-камер нужен ffmpeg. Выполните <code>npm install</code> в папке <code>web</code> (он скачается сам) или <code>brew install ffmpeg</code>, затем перезапустите Mantis.
         </div>
