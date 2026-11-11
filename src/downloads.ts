@@ -5,8 +5,8 @@
 const DL = "https://mantis.rcmit.ru/downloads";
 
 export const DESKTOP_LINKS = {
-  /** Windows – Mantis Агент (архив, внутри «Как запустить.txt»). */
-  windows: `${DL}/Mantis-Agent-Windows.zip`,
+  /** Windows – приложение Mantis, установщик (Windows 10 и 11, 64-бит, без прав администратора). */
+  windows: `${DL}/Mantis-Setup.exe`,
   /** macOS – приложение Mantis, установщик для всех Mac (Apple Silicon и Intel). */
   mac: `${DL}/Mantis-Installer.pkg`,
 } as const;
@@ -32,6 +32,8 @@ export const DESKTOP_TEXT = {
   mac:
     "macOS 13 и новее, Mac на M1 и новее или на Intel. Откройте Mantis-Installer.pkg и нажмите «Установить». " +
     "Если Mac не даёт открыть установщик – «Системные настройки» → «Конфиденциальность и безопасность» → «Всё равно открыть».",
-  windows: "Windows 10 и 11. Распакуйте архив и откройте «Как запустить.txt».",
+  windows:
+    "Windows 10 и 11 (64-бит). Откройте Mantis-Setup.exe и нажмите «Установить», права администратора не нужны. " +
+    "Если Windows покажет «Система Windows защитила ваш компьютер» – «Подробнее» → «Выполнить в любом случае».",
   webcam: "Камеру компьютера или USB-камеру можно подключить и здесь, в браузере.",
 };

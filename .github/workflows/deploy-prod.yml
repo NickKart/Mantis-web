@@ -12,6 +12,7 @@
 # Приложение Mantis для Mac (окно + встроенный Агент, desktop/macos) собирается там же, одной сборкой для Apple Silicon
 # и Intel, и раздаётся как установщик Mantis-Installer.pkg – на него ведёт кнопка «Скачать для macOS».
 # Страница внутри приложения – из того же коммита, что сайт. Не собралось – остаётся прежний установщик.
+# Так же приложение Mantis для Windows (desktop/windows) – установщик Mantis-Setup.exe для кнопки «Скачать для Windows».
 
 name: Деплой в прод
 
@@ -108,9 +109,64 @@ jobs:
             desktop/macos/out/mac-app.sha256
           retention-days: 3
 
+  win-app:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/windows/src-tauri -> target
+
+      - name: Сборка приложения Mantis для Windows
+        run: |
+          npm ci --ignore-scripts
+          bash desktop/windows/build.sh
+
+      - name: Проверка установки и запуска
+        shell: pwsh
+        run: |
+          Start-Process -FilePath "desktop/windows/out/Mantis-Setup.exe" -ArgumentList "/S" -Wait
+          $exe = Join-Path $env:LOCALAPPDATA "Mantis\mantis.exe"
+          if (-not (Test-Path $exe)) { throw "после установки нет $exe" }
+          $p = Start-Process -FilePath $exe -PassThru
+          $ok = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            Start-Sleep -Seconds 2
+            try { Invoke-RestMethod -Uri "http://127.0.0.1:8797/api/bridge" -TimeoutSec 3 | Out-Null; $ok = $true; break } catch { }
+            if ($p.HasExited) { throw "приложение завершилось, код $($p.ExitCode)" }
+          }
+          if (-not $ok) { throw "встроенный Агент не ответил на 127.0.0.1:8797" }
+          Stop-Process -Name mantis -Force
+          cd desktop/windows/out
+          (Get-FileHash Mantis-Setup.exe -Algorithm SHA256).Hash.ToLower() + "  Mantis-Setup.exe" | Out-File -Encoding ascii win-app.sha256
+          Get-Content win-app.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: win-app
+          path: |
+            desktop/windows/out/Mantis-Setup.exe
+            desktop/windows/out/win-app.sha256
+          retention-days: 3
+
   deploy:
     runs-on: ubuntu-latest
-    needs: [agent, mac-app]
+    needs: [agent, mac-app, win-app]
     # Агент или приложение для Mac не собрались – сайт всё равно выкладываем (на сервере остаются прежние файлы)
     if: ${{ !cancelled() }}
     env:
@@ -166,6 +222,13 @@ jobs:
           name: mac-app
           path: mac-out
 
+      - name: Установщик Mantis для Windows
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: win-app
+          path: win-out
+
       - name: Архив релиза
         run: |
           mkdir -p release out
@@ -177,13 +240,19 @@ jobs:
             cat agent-out/agent.sha256 >> release/agent.sha256
             cp agent-out/Mantis-Agent-*.zip out/
           else
-            echo "::warning::Агент не собран – кнопка «Скачать для Windows» будет вести на прежний архив"
+            echo "::warning::Агент не собран – на сервере остаются прежние архивы Агента"
           fi
           if [ -f mac-out/mac-app.sha256 ]; then
             cat mac-out/mac-app.sha256 >> release/agent.sha256
             cp mac-out/Mantis-Installer.pkg out/
           else
             echo "::warning::Приложение для Mac не собрано – кнопка «Скачать для macOS» будет вести на прежний установщик"
+          fi
+          if [ -f win-out/win-app.sha256 ]; then
+            tr -d '\r' < win-out/win-app.sha256 >> release/agent.sha256
+            cp win-out/Mantis-Setup.exe out/
+          else
+            echo "::warning::Приложение для Windows не собрано – кнопка «Скачать для Windows» будет вести на прежний установщик"
           fi
           cat release/agent.sha256
           echo "$GITHUB_SHA" > release/version.txt
@@ -197,7 +266,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="prod-$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}"
-          FILES=$(ls out/Mantis-Agent-*.zip out/Mantis-Installer.pkg 2>/dev/null || true)
+          FILES=$(ls out/Mantis-Agent-*.zip out/Mantis-Installer.pkg out/Mantis-Setup.exe 2>/dev/null || true)
           gh release create "$TAG" out/mantis.tar.gz out/mantis.tar.gz.sha256 out/version.txt $FILES \
             --target "$GITHUB_SHA" --latest --title "Прод $TAG" \
             --notes "Релиз для mantis.rcmit.ru, коммит $GITHUB_SHA. Сервер подхватит его в течение минуты."
