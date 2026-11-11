@@ -1,0 +1,122 @@
+# Mantis для Windows: настольное приложение (окно Tauri + встроенный Агент) и установщик.
+# Запуск: пуш в ветку desktop-windows или вручную (Actions → «Mantis для Windows» → Run workflow).
+# Результат – предварительный релиз GitHub (prerelease) с Mantis-Setup.exe (мастер «Далее → Установить»,
+# без прав администратора) и снимком экрана после запуска.
+# Prerelease не помечается «latest», поэтому прод-сервер (mantis-update.timer) его не трогает.
+# В прод установщик собирает «Деплой в прод» (задача win-app).
+
+name: Mantis для Windows
+
+on:
+  push:
+    branches: [desktop-windows]
+  workflow_dispatch:
+
+concurrency:
+  group: desktop-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/windows/src-tauri -> target
+
+      - name: Сборка
+        run: |
+          npm ci --ignore-scripts
+          bash desktop/windows/build.sh
+
+      - name: Установка без вопросов и первый запуск
+        shell: pwsh
+        run: |
+          $setup = "desktop/windows/out/Mantis-Setup.exe"
+          Start-Process -FilePath $setup -ArgumentList "/S" -Wait
+          $exe = Join-Path $env:LOCALAPPDATA "Mantis\mantis.exe"
+          if (-not (Test-Path $exe)) { Get-ChildItem $env:LOCALAPPDATA\Mantis -ErrorAction SilentlyContinue; throw "после установки нет $exe" }
+          Get-ChildItem (Split-Path $exe) | Format-Table Name, Length
+          $p = Start-Process -FilePath $exe -PassThru
+          $ok = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            Start-Sleep -Seconds 2
+            try {
+              $r = Invoke-RestMethod -Uri "http://127.0.0.1:8797/api/bridge" -TimeoutSec 3
+              Write-Host "Агент ответил:" ($r | ConvertTo-Json -Compress)
+              $ok = $true; break
+            } catch { }
+            if ($p.HasExited) { throw "приложение завершилось, код $($p.ExitCode)" }
+          }
+          if (-not $ok) { throw "встроенный Агент не ответил на 127.0.0.1:8797 за 2 минуты" }
+          $page = Invoke-WebRequest -Uri "http://127.0.0.1:8797/?desktop=windows" -UseBasicParsing
+          if ($page.Headers["Cross-Origin-Embedder-Policy"] -ne "require-corp") { throw "нет заголовка COEP – нейросеть будет однопоточной" }
+          Start-Sleep -Seconds 12
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+          $bmp.Save("desktop/windows/out/first-run.png")
+          # второй запуск не должен открывать вторую копию
+          Start-Process -FilePath $exe
+          Start-Sleep -Seconds 4
+          $n = (Get-Process mantis -ErrorAction SilentlyContinue).Count
+          Write-Host "копий mantis.exe: $n"
+          if ($n -ne 1) { throw "после второго запуска копий mantis.exe: $n (нужна одна)" }
+          Stop-Process -Name mantis -Force
+          Start-Sleep -Seconds 4
+          if (Get-Process mantis-agent -ErrorAction SilentlyContinue) { throw "Агент остался работать после закрытия приложения" }
+
+      - name: Повторная установка поверх
+        shell: pwsh
+        run: |
+          Start-Process -FilePath "desktop/windows/out/Mantis-Setup.exe" -ArgumentList "/S" -Wait
+          if (-not (Test-Path (Join-Path $env:LOCALAPPDATA "Mantis\mantis.exe"))) { throw "после повторной установки нет mantis.exe" }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Mantis-Windows
+          path: |
+            desktop/windows/out/Mantis-Setup.exe
+            desktop/windows/out/first-run.png
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Mantis-Windows
+          path: out
+      - name: Предварительный релиз
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="windows-v$VERSION-$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}"
+          (cd out && sha256sum Mantis-Setup.exe > SHA256SUMS.txt)
+          gh release create "$TAG" out/Mantis-Setup.exe out/first-run.png out/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --prerelease --latest=false --title "Mantis для Windows $VERSION (проверка)" \
+            --notes "Windows 10 и 11 (64-бит). Установка: скачать Mantis-Setup.exe, открыть, «Далее» → «Установить». Права администратора не нужны. Пока без цифровой подписи: если Windows покажет «Система Windows защитила ваш компьютер» – «Подробнее» → «Выполнить в любом случае»."

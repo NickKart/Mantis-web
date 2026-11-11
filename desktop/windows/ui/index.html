@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="color-scheme" content="dark" />
+    <title>Mantis</title>
+    <style>
+      html, body { height: 100%; margin: 0; }
+      body { background: #0b1330; color: #e8edf7; font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+             display: flex; align-items: center; justify-content: center; -webkit-user-select: none; user-select: none; }
+      .box { text-align: center; max-width: 440px; padding: 24px; }
+      .logo { font-size: 28px; font-weight: 700; letter-spacing: .5px; margin-bottom: 18px; }
+      .spin { width: 28px; height: 28px; margin: 0 auto 14px; border: 3px solid #24315f; border-top-color: #4a9bd8; border-radius: 50%; animation: s 0.9s linear infinite; }
+      @keyframes s { to { transform: rotate(360deg); } }
+      .note { color: #9aa7c2; font-size: 13px; }
+      .err { color: #ff8a8a; white-space: pre-wrap; text-align: left; font-size: 13px; background: #121c40; padding: 12px; border-radius: 8px; margin-top: 12px; display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <div class="logo">Mantis</div>
+      <div class="spin" id="spin"></div>
+      <div id="msg">Запускаю…</div>
+      <div class="note" id="note">Первый запуск занимает несколько секунд.</div>
+      <div class="err" id="err"></div>
+    </div>
+    <script>
+      // Вызывает оболочка, если встроенный Агент не запустился
+      window.showError = (text) => {
+        document.getElementById("spin").style.display = "none";
+        document.getElementById("msg").textContent = "Mantis не запустился";
+        document.getElementById("note").textContent = "Перезапустите приложение. Если не поможет – пришлите текст ниже.";
+        const e = document.getElementById("err");
+        e.style.display = "block";
+        e.textContent = text;
+      };
+    </script>
+  </body>
+</html>
