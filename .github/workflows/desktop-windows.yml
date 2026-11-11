@@ -129,6 +129,7 @@ jobs:
           netsh advfirewall firewall show rule name="Mantis IP cameras" | Out-Null
           if ($LASTEXITCODE -eq 0) { throw "после удаления осталось правило брандмауэра" }
           "Удалено"
+          exit 0  # код возврата netsh выше («правила нет») – не ошибка
 
       - uses: actions/upload-artifact@v4
         if: always()
