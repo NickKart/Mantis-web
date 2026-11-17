@@ -12,15 +12,16 @@ describe("тарифы", () => {
     expect([1, 2, 4, 5, 30].map(planForCameras)).toEqual(["start", "vitrina", "vitrina", "set", "set"]);
   });
   it("суммы как на rcmit.ru/mantis", () => {
-    expect(paymentAmount({ plan: "start", cameras: 1, period: "month" })).toBe(190_00);
+    expect(paymentAmount({ plan: "start", cameras: 1, period: "month" })).toBe(0);
     expect(paymentAmount({ plan: "vitrina", cameras: 3, period: "month" })).toBe(1350_00);
     expect(paymentAmount({ plan: "vitrina", cameras: 2, period: "year" })).toBe(400_00 * 2 * 12);
     expect(paymentAmount({ plan: "set", cameras: 6, period: "year" })).toBe(450_00 * 6 * 12);
     expect(monthlyCharge("set", 5, false)).toBe(2500_00);
   });
   it("проверка выбора", () => {
-    expect(checkSelection({ plan: "start", cameras: 1, period: "month" })).toBeNull();
-    expect(checkSelection({ plan: "start", cameras: 1, period: "year" })).toMatch(/нет оплаты за год/);
+    expect(checkSelection({ plan: "start", cameras: 1, period: "month" })).toMatch(/бесплатный/);
+    expect(checkSelection({ plan: "vitrina", cameras: 2, period: "month" })).toBeNull();
+    expect(checkSelection({ plan: "set", cameras: 5, period: "year" })).toBeNull();
     expect(checkSelection({ plan: "vitrina", cameras: 5, period: "month" })).toMatch(/2–4/);
     expect(checkSelection({ plan: "set", cameras: 0, period: "month" })).toMatch(/от 1 до 100/);
     expect(checkSelection({ plan: "x" as never, cameras: 1, period: "month" })).toMatch(/Неизвестный/);
@@ -43,32 +44,32 @@ describe("списания", () => {
   });
 
   it("не хватает на следующий месяц – подписка закончилась, после пополнения продолжается", () => {
-    const a = applyTopup(emptyAccount(), { plan: "start", cameras: 1, period: "month" }, 190_00, "p1", now).account;
+    const a = applyTopup(emptyAccount(), { plan: "vitrina", cameras: 2, period: "month" }, 900_00, "p1", now).account;
     const later = D("2026-12-06T00:00:00Z");
     const r = applyCharges(a, later);
     expect(r.entries).toHaveLength(0);
     expect(r.account.status).toBe("expired");
-    const t = applyTopup(r.account, { plan: "start", cameras: 1, period: "month" }, 190_00, "p2", later);
+    const t = applyTopup(r.account, { plan: "vitrina", cameras: 2, period: "month" }, 900_00, "p2", later);
     // закончилась меньше 3 дней назад – новый месяц встык с прошлым
     expect(t.account.paidUntil).toBe(D("2027-01-05T12:00:00Z"));
     expect(t.account.status).toBe("active");
   });
 
   it("после долгого перерыва месяц считается от сегодня", () => {
-    const a = { ...emptyAccount(), plan: "start" as const, cameras: 1, paidUntil: D("2026-09-01T00:00:00Z"), status: "expired" as const, balance: 500_00 };
+    const a = { ...emptyAccount(), plan: "vitrina" as const, cameras: 2, paidUntil: D("2026-09-01T00:00:00Z"), status: "expired" as const, balance: 1000_00 };
     const r = applyCharges(a, now);
     expect(r.entries).toHaveLength(1);
     expect(r.account.paidUntil).toBe(D("2026-12-05T12:00:00Z"));
-    expect(r.account.balance).toBe(310_00);
+    expect(r.account.balance).toBe(100_00);
   });
 
   it("баланс на несколько месяцев списывается по одному, когда наступает срок", () => {
-    let a = applyTopup(emptyAccount(), { plan: "start", cameras: 1, period: "month" }, 190_00, "p1", now).account;
-    a = { ...a, balance: 380_00 };
+    let a = applyTopup(emptyAccount(), { plan: "vitrina", cameras: 2, period: "month" }, 900_00, "p1", now).account;
+    a = { ...a, balance: 1800_00 };
     expect(applyCharges(a, D("2026-11-20T00:00:00Z")).entries).toHaveLength(0);
     const r = applyCharges(a, D("2026-12-05T12:00:01Z"));
     expect(r.entries).toHaveLength(1);
-    expect(r.account.balance).toBe(190_00);
+    expect(r.account.balance).toBe(900_00);
     expect(r.account.paidUntil).toBe(D("2027-01-05T12:00:00Z"));
   });
 
@@ -93,11 +94,23 @@ describe("списания", () => {
   });
 
   it("автопродление выключено – не списывает", () => {
-    const a = { ...applyTopup(emptyAccount(), { plan: "start", cameras: 1, period: "month" }, 380_00, "p1", now).account, autoRenew: false };
+    const a = { ...applyTopup(emptyAccount(), { plan: "vitrina", cameras: 2, period: "month" }, 1800_00, "p1", now).account, autoRenew: false };
     const r = applyCharges(a, D("2026-12-06T00:00:00Z"));
     expect(r.entries).toHaveLength(0);
     expect(r.account.status).toBe("expired");
-    expect(r.account.balance).toBe(190_00);
+    expect(r.account.balance).toBe(900_00);
+  });
+
+  it("бесплатный «Старт»: без пробного периода, списаний и автоплатежей", () => {
+    expect(startTrial(emptyAccount(), "start", 1, now)).toMatch(/нет пробного/);
+    // раньше «Старт» был платным: оплаченный срок заканчивается, дальше ничего не списывается, деньги остаются на балансе
+    const a = { ...emptyAccount(), plan: "start" as const, cameras: 1, paidUntil: now - DAY, status: "active" as const, balance: 500_00,
+      card: { id: "pm-1", title: "Bank card *4444" } };
+    const r = applyCharges(a, now);
+    expect(r.entries).toHaveLength(0);
+    expect(r.account.balance).toBe(500_00);
+    expect(nextCharge(a, now)).toBeNull();
+    expect(autopayAmount({ ...a, balance: 0 }, now)).toBeNull();
   });
 
   it("пробный период: 7 дней бесплатно один раз, потом списание с баланса", () => {
