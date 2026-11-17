@@ -1,7 +1,7 @@
 // Профиль → подписка: состояние счёта, выбор тарифа и камер, оплата через ЮKassa, пробный период, история.
 import { useEffect, useState } from "preact/hooks";
 import {
-  MAX_CAMERAS, PLAN_IDS, type Period, type PlanId, TARIFFS, TRIAL_DAYS, paymentAmount, planForCameras, plural, rangeText, rub,
+  MAX_CAMERAS, PLAN_IDS, type Period, type PlanId, TARIFFS, TRIAL_DAYS, isFree, paymentAmount, planForCameras, plural, rangeText, rub,
 } from "../../api/_lib/tariffs";
 import { type BillingStatus, type ReturnKind, billing } from "./billing";
 import { abTrack } from "../../ab/client";
@@ -22,6 +22,7 @@ export function Subscription(p: { returned?: ReturnKind | null; toast: (text: st
   const [saveCard, setSaveCard] = useState(true);
   const plan = planForCameras(cameras);
   const t = TARIFFS[plan];
+  const free = isFree(plan);
 
   const load = async () => {
     try {
@@ -137,7 +138,7 @@ export function Subscription(p: { returned?: ReturnKind | null; toast: (text: st
           return (
             <button key={id} type="button" role="radio" aria-checked={plan === id} class="plan" onClick={() => pickPlan(id)}>
               <span class="plan-name">{x.name}</span>
-              <span class="plan-price">{rub(x.month)}<small> за камеру в месяц</small></span>
+              <span class="plan-price">{x.month === 0 ? "Бесплатно" : <>{rub(x.month)}<small> за камеру в месяц</small></>}</span>
               {x.year != null && <span class="plan-year">{rub(x.year)} при оплате за год</span>}
               <span class="plan-range">{rangeText(x)}{x.trial ? ` · ${TRIAL_DAYS} дней бесплатно` : ""}</span>
               <ul>{x.features.map((f) => <li key={f}>{f}</li>)}</ul>
@@ -159,17 +160,27 @@ export function Subscription(p: { returned?: ReturnKind | null; toast: (text: st
             <button type="button" class="btn icon" aria-label="Больше камер" disabled={cameras >= MAX_CAMERAS} onClick={() => setCameras(cameras + 1)}>+</button>
           </div>
         </div>
-        <div class="field">
+        {!free && <div class="field">
           <span class="label">Оплата</span>
           <div class="seg">
             <button type="button" aria-pressed={period === "month"} onClick={() => setPeriod("month")}>За месяц</button>
             <button type="button" aria-pressed={period === "year"} disabled={t.year == null} title={t.year == null ? `У тарифа «${t.name}» нет оплаты за год` : undefined}
               onClick={() => setPeriod("year")}>За год{t.year != null ? ` −${Math.round((1 - t.year / t.month) * 100)}%` : ""}</button>
           </div>
-        </div>
+        </div>}
       </div>
 
-      <div class="sub-total">
+      {free ? (
+        <div class="sub-total">
+          <div>
+            <div class="sub-sum">Бесплатно</div>
+            <div class="small muted">
+              «{t.name}» – 1 камера без подписки и оплаты. PDF-отчёт – с отметкой «Сделано в Мантис».
+              Для 2 и более камер, IP-камер и отчёта без отметки – «{TARIFFS.vitrina.name}» или «{TARIFFS.set.name}».
+            </div>
+          </div>
+        </div>
+      ) : <div class="sub-total">
         <div>
           <div class="sub-sum">{rub(amount)}</div>
           <div class="small muted">
@@ -180,8 +191,8 @@ export function Subscription(p: { returned?: ReturnKind | null; toast: (text: st
           {trialOk && <button class="btn lg" disabled={busy} onClick={() => void trial()}>{trialNeedsCard ? `${TRIAL_DAYS} дней бесплатно – привязать карту` : `${TRIAL_DAYS} дней бесплатно`}</button>}
           <button class="btn lg solid" disabled={busy || !acc} onClick={() => void pay()}>Оплатить {rub(amount)}</button>
         </span>
-      </div>
-      {autopay && !acc?.card && (
+      </div>}
+      {!free && autopay && !acc?.card && (
         <label class="sub-check">
           <input type="checkbox" checked={saveCard} onChange={(e) => setSaveCard((e.target as HTMLInputElement).checked)} />
           <span class="small">Сохранить карту и продлевать подписку с неё, если на балансе не хватает</span>
@@ -195,10 +206,10 @@ export function Subscription(p: { returned?: ReturnKind | null; toast: (text: st
         </p>
       )}
       {err && <p class="error-text">{err}</p>}
-      <p class="small muted">
+      {!free && <p class="small muted">
         Оплата через ЮKassa: карта, СБП, SberPay. Деньги зачисляются на баланс, подписка продлевается каждый месяц списанием с баланса
         {autopay ? ", а если на балансе не хватает – с сохранённой карты" : ""}. Новый тариф или число камер начнут действовать со следующего списания.
-      </p>
+      </p>}
 
       {st && st.ledger.length > 0 && (
         <details class="ledger">
@@ -224,7 +235,10 @@ function StatusCard(p: { st: BillingStatus; onRenew: (on: boolean) => void; onBi
   const { account: a, next, now } = p.st;
   const t = a.plan ? TARIFFS[a.plan] : null;
   const live = a.paidUntil != null && a.paidUntil > now;
-  const badge = a.status === "trial" && live ? { cls: "trial", text: `Пробный период до ${dateText(a.paidUntil!)}` }
+  // без подписки пользователь на бесплатном «Старте»
+  const free = !a.plan || isFree(a.plan);
+  const badge = free ? { cls: "ok", text: "Бесплатно" }
+    : a.status === "trial" && live ? { cls: "trial", text: `Пробный период до ${dateText(a.paidUntil!)}` }
     : live ? { cls: "ok", text: `Оплачено до ${dateText(a.paidUntil!)}` }
       : a.paidUntil ? { cls: "off", text: `Закончилась ${dateText(a.paidUntil)}` }
         : { cls: "none", text: "Не оформлена" };
@@ -232,7 +246,7 @@ function StatusCard(p: { st: BillingStatus; onRenew: (on: boolean) => void; onBi
     <div class="sub-card">
       <div class="sub-top">
         <div class="sub-plan">
-          <b>{t ? `${t.name} · ${cams(a.cameras)}` : "Тариф не выбран"}</b>
+          <b>{free ? `${TARIFFS.start.name} · ${cams(1)}` : `${t!.name} · ${cams(a.cameras)}`}</b>
           <span class={`badge-${badge.cls}`}>{badge.text}</span>
         </div>
         <div class="sub-balance">
@@ -240,7 +254,7 @@ function StatusCard(p: { st: BillingStatus; onRenew: (on: boolean) => void; onBi
           <b>{rub(a.balance)}</b>
         </div>
       </div>
-      {t && (
+      {t && !free && (
         <div class="sub-next">
           <span class="small">
             {!a.autoRenew ? "Автопродление выключено – после окончания срока подписка остановится."
@@ -260,7 +274,7 @@ function StatusCard(p: { st: BillingStatus; onRenew: (on: boolean) => void; onBi
         </div>
       )}
       {a.autopayError && <p class="sub-warn">{a.autopayError}</p>}
-      {(a.card || p.st.autopay) && (
+      {(a.card || (p.st.autopay && !free)) && (
         <div class="sub-cardrow">
           {a.card ? (
             <>

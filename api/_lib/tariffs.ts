@@ -1,5 +1,6 @@
 // Тарифы Mantis и расчёт списаний. Общий код для сервера (api/*) и интерфейса (src/app).
-// Цены – с rcmit.ru/mantis (ноябрь 2026): за одну камеру в месяц, в копейках.
+// Цены – с rcmit.ru/mantis, раздел «Стоимость» (17 ноября 2026): за одну камеру в месяц, в копейках.
+// «Старт» (1 камера) бесплатный: подписка и оплата не нужны, PDF-отчёт с отметкой «Сделано в Мантис».
 // Без зависимостей от Node и браузера, чтобы считать одинаково везде и проверять тестами.
 
 export type PlanId = "start" | "vitrina" | "set";
@@ -8,7 +9,7 @@ export type Period = "month" | "year";
 export interface Tariff {
   id: PlanId;
   name: string;
-  /** Цена за камеру в месяц, копейки. */
+  /** Цена за камеру в месяц, копейки. 0 – бесплатный тариф: без оплаты, пробного периода и списаний. */
   month: number;
   /** Цена за камеру в месяц при оплате за год, копейки; null – годовой оплаты нет. */
   year: number | null;
@@ -20,16 +21,16 @@ export interface Tariff {
 
 export const TARIFFS: Record<PlanId, Tariff> = {
   start: {
-    id: "start", name: "Старт", month: 190_00, year: null, minCameras: 1, maxCameras: 1, trial: true,
-    features: ["1 камера: телефон, USB или IP", "Аналитика", "PDF-отчёт с отметкой «Сделано в Mantis»"],
+    id: "start", name: "Старт", month: 0, year: null, minCameras: 1, maxCameras: 1, trial: false,
+    features: ["1 камера: телефон, USB-камера или камера компьютера", "Аналитика", "PDF-отчёт с отметкой «Сделано в Мантис»"],
   },
   vitrina: {
     id: "vitrina", name: "Витрина", month: 450_00, year: 400_00, minCameras: 2, maxCameras: 4, trial: true,
-    features: ["2–4 камеры", "Аналитика и дополнительная аналитика", "PDF-отчёт без отметки"],
+    features: ["2–4 камеры: телефон, USB-камера, камера компьютера, IP-камера", "Аналитика и расширенная аналитика", "PDF-отчёт без отметки"],
   },
   set: {
     id: "set", name: "Сеть", month: 500_00, year: 450_00, minCameras: 5, maxCameras: 100, trial: false,
-    features: ["От 5 камер", "Сравнение точек, конверсия по чекам", "Интеграция с 1С и кассой, API"],
+    features: ["От 5 камер: USB-камера или IP-камера на компьютере", "Аналитика и расширенная аналитика", "Сравнение точек, конверсия по чекам", "Интеграция с 1С и кассами, API"],
   },
 };
 
@@ -40,6 +41,9 @@ export const TRIAL_DAYS = 7;
 const GRACE_MS = 3 * 24 * 3600_000;
 
 export const isPlan = (x: unknown): x is PlanId => typeof x === "string" && x in TARIFFS;
+
+/** Бесплатный тариф («Старт»): оплачивать и продлевать нечего. */
+export const isFree = (plan: PlanId): boolean => TARIFFS[plan].month === 0;
 
 /** Тариф по числу камер: 1 – Старт, 2–4 – Витрина, от 5 – Сеть. */
 export function planForCameras(cameras: number): PlanId {
@@ -67,6 +71,7 @@ export function checkSelection(s: Partial<Selection>): string | null {
   if (typeof n !== "number" || !Number.isInteger(n) || n < 1 || n > MAX_CAMERAS) return "Число камер – от 1 до 100";
   const t = TARIFFS[s.plan];
   if (n < t.minCameras || n > t.maxCameras) return `Тариф «${t.name}» – для ${rangeText(t)}`;
+  if (isFree(s.plan)) return `Тариф «${t.name}» бесплатный – оплачивать не нужно`;
   if (s.period !== "month" && s.period !== "year") return "Неизвестный период оплаты";
   if (s.period === "year" && t.year == null) return `У тарифа «${t.name}» нет оплаты за год`;
   return null;
@@ -170,6 +175,11 @@ export function applyCharges(acc: Account, now: number): { account: Account; ent
       a.status = "none";
       break;
     }
+    // бесплатный тариф ничего не списывает; оплаченный ранее срок просто заканчивается
+    if (isFree(a.plan)) {
+      a.status = a.paidUntil == null ? "none" : "expired";
+      break;
+    }
     if (!a.autoRenew) {
       a.status = a.paidUntil == null ? "none" : "expired";
       break;
@@ -214,7 +224,7 @@ export function applyTopup(
   return { account: r.account, entries: [top, ...r.entries] };
 }
 
-/** Начать пробный период: 7 дней без списания, один раз на аккаунт, только Старт и Витрина. */
+/** Начать пробный период: 7 дней без списания, один раз на аккаунт, только Витрина. */
 export function startTrial(acc: Account, plan: PlanId, cameras: number, now: number): { account: Account; entry: Entry } | string {
   if (acc.trialUsed) return "Пробный период уже был";
   if (acc.paidUntil != null && acc.paidUntil > now) return "Подписка уже действует";
@@ -231,7 +241,7 @@ export function startTrial(acc: Account, plan: PlanId, cameras: number, now: num
 
 /** Следующее списание: когда, сколько, хватает ли баланса и сколько возьмём с карты. */
 export function nextCharge(acc: Account, now: number): { at: number; amount: number; enough: boolean; fromCard: number } | null {
-  if (!acc.plan || !acc.autoRenew) return null;
+  if (!acc.plan || !acc.autoRenew || isFree(acc.plan)) return null;
   const at = acc.paidUntil != null && acc.paidUntil > now ? acc.paidUntil : now;
   const amount = monthlyCharge(acc.plan, acc.cameras, acc.annualUntil != null && at < acc.annualUntil);
   const enough = acc.balance >= amount;
@@ -246,7 +256,7 @@ export function nextCharge(acc: Account, now: number): { at: number; amount: num
  * не оплатит сам. Минимум 1 ₽ – меньше ЮKassa не принимает.
  */
 export function autopayAmount(acc: Account, now: number): number | null {
-  if (!acc.card || !acc.plan || !acc.autoRenew || acc.paidUntil == null) return null;
+  if (!acc.card || !acc.plan || !acc.autoRenew || acc.paidUntil == null || isFree(acc.plan)) return null;
   if (acc.paidUntil > now || now - acc.paidUntil > GRACE_MS) return null;
   const cost = monthlyCharge(acc.plan, acc.cameras, acc.annualUntil != null && acc.paidUntil < acc.annualUntil);
   if (acc.balance >= cost) return null;
